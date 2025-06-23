@@ -1,0 +1,49 @@
+{
+  "fault_type": "Interplate - Dip Slip",
+  "C1": 17.5,
+  "C2": 3.8e-5,
+  "segments": {
+    "logA-logL": [
+      { "b": 2.000,   "a": 0.000,  "range_km": [   0,  5.36] },
+      { "b": 1.667,   "a": 1.243,  "range_km": [ 5.36,  null] }
+    ],
+    "logW-logL": [
+      { "b": 1.000,   "a": 0.000,  "range_km": [   0,  5.36] },
+      { "b": 0.667,   "a": 1.243,  "range_km": [ 5.36,  null] }
+    ],
+    "logW-logA": [
+      { "b": 0.500,   "a": 0.000,  "range_km2": [   0,   28.7] },
+      { "b": 0.400,   "a": 0.746,  "range_km2": [28.7,  null] }
+    ],
+    "logD-logA": { "b": 0.500,   "a": -4.420 },
+    "logD-logL": [
+      { "b": 1.000,   "a": -4.420, "range_km": [   0,  5.36] },
+      { "b": 0.833,   "a": -3.799, "range_km": [ 5.36,  null] }
+    ],
+    "logD-logW": [
+      { "b": 1.250,   "a": -5.352, "range_km": [ 5.36,  null] }
+    ],
+    "logM0-logA": [
+      { "b": 1.500,   "a":  6.098, "range_km2": [   0,   null] }
+    ],
+    "logM0-logL": [
+      { "b": 3.000,   "a":  6.098, "range_km": [   0,  5.36] },
+      { "b": 2.500,   "a":  7.963, "range_km": [ 5.36,  null] }
+    ],
+    "logM0-logW": [
+      { "b": 3.750,   "a":  3.301, "range_km": [ 5.36,  null] }
+    ],
+    "logM0-logD": [
+      { "b": 3.000,   "a": 14.939, "range_km": [   0,   null] }
+    ]
+  },
+  "mw_relations": {
+    "Mw_logA":   { "b": 1.000, "a": 4.00                      },
+    "Mw_logL": [
+      { "b": 2.000, "a": 4.00,  "range_km": [ 0.0,  5.4]      },
+      { "b": 1.667, "a": 4.24,  "range_km": [ 5.4,  null]    }
+    ],
+    "Mw_logW":   { "b": 2.500, "a": 3.63,  "range_km": [5.4,  null] },
+    "Mw_logD":   { "b": 2.000, "a": 6.84                      }
+  }
+}

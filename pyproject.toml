@@ -1,0 +1,29 @@
+[project]
+name = "scalculator"
+version = "1.0.0"
+description = "Interactive GUI + library for earthquake scaling relationships"
+authors = [{name = "James La Greca", email = "jlagreca@student.unimelb.edu.au"}]
+readme = "README.md"
+requires-python = ">=3.9"
+
+dependencies = [
+  "streamlit>=1.32",
+  "pandas>=2.0",
+  "numpy>=1.23",
+  "plotly>=5.18",      # ← NEW
+  "openpyxl>=3.1"      # ← NEW  (xlsx reader)
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "black", "ruff"]
+
+[project.scripts]
+scalculator = "scalculator_app:main"   # optional CLI entry-point
+
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-data]
+"scaling_models" = ["data/*.json"]
+"scaling_models.leonard_2014" = ["data/*.json"] 

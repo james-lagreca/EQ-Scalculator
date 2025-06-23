@@ -1,0 +1,2 @@
+[console_scripts]
+scalculator = scalculator_app:main
