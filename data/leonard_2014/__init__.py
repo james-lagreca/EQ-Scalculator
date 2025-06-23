@@ -34,7 +34,7 @@ MODELS = {}
 for p in data_dir.glob("*.json"):
     cfg = json.loads(p.read_text())
     MODELS[cfg["fault_type"]] = cfg          # long label as key
-
+    
 # -----------------------------------------------------------------
 # 2.  alias: short tag  →  long tag
 # -----------------------------------------------------------------
@@ -74,8 +74,8 @@ def _geom_from_mw(Mw, rel):             # return km / km² / m
 
 # ---------- public wrapper ---------------------------------------------
 def solve(driver, value, target, fault_type="SCR_SS"):
-    cfg = MODELS[fault_type]
-
+    cfg   = MODELS[fault_type]
+    mwrel = cfg["mw_relations"]
     # -- Table-4 Mw relations (km / km² / m) ----------------------------
 #  -- Mw forward -------------------------------------------------
     if target == "Mw":
