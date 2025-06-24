@@ -6,12 +6,9 @@ An interactive web application for calculating, exploring, and comparing empiric
 
 This tool is designed for seismologists, geologists, earthquake engineers, and students to quickly work with different scaling laws without needing to manually implement the equations.
 
-![Application Screenshot](https://raw.githubusercontent.com/james-lagreca/EQ-Scalculator/main/screenshots/explore_relationships.png)
-<!-- TODO: Upload your screenshot to a 'screenshots' folder in your repo and update this link -->
-
 ---
 
-## ✨ Features
+## Features
 
 EQ-Scalculator provides a comprehensive suite of tools built into a user-friendly interface:
 
@@ -22,7 +19,7 @@ EQ-Scalculator provides a comprehensive suite of tools built into a user-friendl
 * **Unit Conversion:** Automatically handles and converts between common units (e.g., `km` to `m`, `Nm` to `dyne.cm`).
 * **Extensible Model Library:** The app is built on a modular system where new scaling relationship models can be easily added by creating a simple JSON file.
 
-## 🚀 Live Demo
+## Live App
 
 You can access the live, running application here:
 
@@ -31,7 +28,7 @@ You can access the live, running application here:
 
 ---
 
-## 🛠️ Running Locally
+## Running Locally
 
 To run this application on your own machine, follow these steps:
 
@@ -66,7 +63,7 @@ To run this application on your own machine, follow these steps:
 
 ---
 
-## 🏗️ Project Structure
+## Project Structure
 
 The repository is organized to be clear and extensible:
 
