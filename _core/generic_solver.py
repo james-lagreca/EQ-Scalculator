@@ -1,21 +1,12 @@
 # In _core/generic_solver.py
 
 import math
-from .helpers import convert_units # Assuming helpers.py is in the same _core/ directory
+import numpy as np
+from .helpers import convert_units
 
 def solve_relationship(model_params, input_val, input_unit, direction='forward'):
     """
-    Solves a scaling relationship for a given input value, with support for inverse calculations.
-    This is the core engine of the calculator.
-
-    Args:
-        model_params (list): A list of dictionaries for a specific relationship.
-        input_val (float): The user's input value.
-        input_unit (str): The unit of the user's input value.
-        direction (str): 'forward' or 'inverse'.
-
-    Returns:
-        A tuple of (result, result_unit_or_error_message).
+    Solves a scaling relationship for a given input value (deterministic).
     """
     # In inverse mode, the roles of X and Y are swapped.
     x_key = 'x' if direction == 'forward' else 'y'
@@ -23,77 +14,117 @@ def solve_relationship(model_params, input_val, input_unit, direction='forward')
 
     model_input_unit = model_params[0]['units'][x_key]
     
-    # Use the helper function to convert the user's input to what the model expects.
     if model_input_unit:
         try:
-            # Note: For inverse, we check if the input value is within the model's OUTPUT range.
-            # A full implementation would pre-calculate these inverted ranges. For now, we check later.
             converted_input = convert_units(input_val, input_unit, model_input_unit)
         except ValueError as e:
             return None, str(e)
     else:
         converted_input = input_val
 
-    # Find the correct segment. For inverse, we check against the output of the forward equation.
     for segment in model_params:
         a = segment['coefficients']['a']
         b = segment['coefficients']['b']
         form = segment['equation_form']
         
-        # --- Check if the input is in the valid range ---
-        # For forward, we check the input directly.
+        min_range, max_range = segment.get('range_x') or (None, None)
         if direction == 'forward':
-            min_range, max_range = segment['range_x']
-            in_range = True
-            if min_range is not None and converted_input < min_range:
-                in_range = False
-            if max_range is not None and converted_input > max_range:
-                in_range = False
-            if not in_range:
-                continue # Try the next segment
+            if (min_range is not None and converted_input < min_range) or \
+               (max_range is not None and converted_input > max_range):
+                continue
         
-        # --- Apply the correct mathematical formula ---
         output_unit = segment['units'][y_key]
-
-        # Standard log-log relation (e.g., Leonard 2014)
-        if form == "log10(Y) = a + b * log10(X)":
-            if direction == 'forward':
-                if converted_input <= 0: return None, "Input must be positive for log-log scale."
-                log10_y = a + b * math.log10(converted_input)
-                result = 10**log10_y
-                return result, output_unit
-            else: # Inverse
-                if converted_input <= 0: return None, "Input must be positive for log-log scale."
-                # log10(X) = (log10(Y) - a) / b
-                log10_x = (math.log10(converted_input) - a) / b
-                result = 10**log10_x
-                return result, output_unit
+        result = _calculate_deterministic(form, converted_input, a, b, direction)
         
-        # Semi-log relation (e.g., Leonard 2014, Mw from L)
-        elif form == "Y = a + b * log10(X)":
-            if direction == 'forward':
-                if converted_input <= 0: return None, "Input must be positive for log scale."
-                result = a + b * math.log10(converted_input)
-                return result, output_unit
-            else: # Inverse
-                # log10(X) = (Y - a) / b
-                log10_x = (converted_input - a) / b
-                result = 10**log10_x
-                return result, output_unit
-
-        # Log-linear relation (e.g., Yang 2020)
-        elif form == "log10(Y) = a + b * X":
-            if direction == 'forward':
-                log10_y = a + b * converted_input
-                result = 10**log10_y
-                return result, output_unit
-            else: # Inverse
-                if converted_input <= 0: return None, "Input must be positive for log scale."
-                # X = (log10(Y) - a) / b
-                result = (math.log10(converted_input) - a) / b
-                return result, output_unit
-        else:
-            return None, f"Unknown equation form: {form}"
+        if result is not None:
+             return result, output_unit
 
     return None, "Input value is outside the valid range for all segments of this model."
+
+def calculate_curve(model_params, x_values, input_unit, direction='forward'):
+    """Calculates the Y values for a given range of X values to plot a curve."""
+    y_values = []
+    output_unit = ""
+    for x in x_values:
+        y, unit = solve_relationship(model_params, x, input_unit, direction)
+        y_values.append(y)
+        if y is not None and not output_unit:
+            output_unit = unit
+    return y_values, output_unit
+
+# --- NEW MONTE CARLO FUNCTION ---
+def solve_one_simulation_run(model_params, input_val, input_unit, direction='forward'):
+    """
+    Performs a single stochastic calculation for a Monte Carlo simulation.
+    It introduces randomness based on the model's defined uncertainty.
+    """
+    x_key = 'x' if direction == 'forward' else 'y'
+    y_key = 'y' if direction == 'forward' else 'x'
+    model_input_unit = model_params[0]['units'][x_key]
+    
+    if model_input_unit:
+        converted_input = convert_units(input_val, input_unit, model_input_unit)
+    else:
+        converted_input = input_val
+
+    # Find the correct segment for the deterministic input
+    target_segment = None
+    for segment in model_params:
+        min_range, max_range = segment.get('range_x') or (None, None)
+        if direction == 'forward':
+            if (min_range is None or converted_input >= min_range) and \
+               (max_range is None or converted_input < max_range):
+                target_segment = segment
+                break
+        else: # For inverse, just use the first segment for now
+            target_segment = segment
+            break
+    
+    if not target_segment:
+        return None, "Input outside valid range."
+
+    # --- Introduce randomness based on uncertainty ---
+    a = target_segment['coefficients']['a']
+    b = target_segment['coefficients']['b']
+    form = target_segment['equation_form']
+    
+    # Case 1: Uncertainty on the 'a' coefficient (Leonard 2014)
+    if 'std_dev_a' in target_segment and isinstance(target_segment['std_dev_a'], str):
+        try:
+            low_a, high_a = map(float, target_segment['std_dev_a'].split(' to '))
+            # Assume range is +/- 1 std dev from the mean 'a'
+            mean_a = (low_a + high_a) / 2
+            std_a = (high_a - mean_a)
+            a_random = np.random.normal(loc=a, scale=std_a)
+        except (ValueError, TypeError):
+             a_random = a # Fallback if parsing fails
+    else:
+        a_random = a
+        
+    result = _calculate_deterministic(form, converted_input, a_random, b, direction)
+    
+    # Case 2: Uncertainty on the final log10(Y) value (Somerville, Yang)
+    if 'log10_y_std_dev' in target_segment and result is not None and direction == 'forward':
+        std_dev = target_segment['log10_y_std_dev']
+        log10_y = math.log10(result)
+        log10_y_random = np.random.normal(loc=log10_y, scale=std_dev)
+        result = 10**log10_y_random
+    
+    return result, target_segment['units'][y_key]
+
+def _calculate_deterministic(form, x, a, b, direction):
+    """Helper function to perform the core math for an equation."""
+    try:
+        if form == "log10(Y) = a + b * log10(X)":
+            if direction == 'forward': return 10**(a + b * math.log10(x))
+            else: return 10**((math.log10(x) - a) / b)
+        elif form == "Y = a + b * log10(X)":
+            if direction == 'forward': return a + b * math.log10(x)
+            else: return 10**((x - a) / b)
+        elif form == "log10(Y) = a + b * X":
+            if direction == 'forward': return 10**(a + b * x)
+            else: return (math.log10(x) - a) / b
+    except (ValueError, ZeroDivisionError):
+        return None
+    return None
 

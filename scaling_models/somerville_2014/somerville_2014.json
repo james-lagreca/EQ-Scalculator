@@ -5,12 +5,13 @@
       "SCR - Aftershock Method": {
         "A_from_M0": [
           {
-            "source": "Table 3",
+            "source": "Table 3 & 5",
             "equation_form": "log10(Y) = a + b * log10(X)",
             "coefficients": {
               "a": -14.876,
               "b": 0.66667
             },
+            "log10_y_std_dev": 0.20,
             "units": {
               "x": "dyne.cm",
               "y": "km^2"
@@ -25,12 +26,13 @@
       "SCR - Duration Method": {
         "A_from_M0": [
           {
-            "source": "Table 3",
+            "source": "Table 3 & 5",
             "equation_form": "log10(Y) = a + b * log10(X)",
             "coefficients": {
               "a": -15.028,
               "b": 0.66667
             },
+            "log10_y_std_dev": 0.20,
             "units": {
               "x": "dyne.cm",
               "y": "km^2"
@@ -45,12 +47,13 @@
       "SCR - Slip Model Method": {
         "A_from_M0": [
           {
-            "source": "Table 3",
+            "source": "Table 3 & 5",
             "equation_form": "log10(Y) = a + b * log10(X)",
             "coefficients": {
               "a": -14.934,
               "b": 0.66667
             },
+            "log10_y_std_dev": 0.20,
             "units": {
               "x": "dyne.cm",
               "y": "km^2"
@@ -65,12 +68,13 @@
       "SCR - Combined Methods": {
         "A_from_M0": [
           {
-            "source": "Table 3",
+            "source": "Table 3 & 5",
             "equation_form": "log10(Y) = a + b * log10(X)",
             "coefficients": {
               "a": -14.946,
               "b": 0.66667
             },
+            "log10_y_std_dev": 0.20,
             "units": {
               "x": "dyne.cm",
               "y": "km^2"
