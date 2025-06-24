@@ -8,6 +8,5 @@ scalculator.egg-info/requires.txt
 scalculator.egg-info/top_level.txt
 scaling_models/__init__.py
 scaling_models/leonard_2014/__init__.py
-scaling_models/somerville_2014/somerville_2014.py
 scaling_models/yang_etal_2020/__init__.py
 tests/test_solver.py
