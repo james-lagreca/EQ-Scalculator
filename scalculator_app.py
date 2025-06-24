@@ -1,297 +1,143 @@
-import streamlit as st, importlib, pkgutil, pandas as pd, numpy as np
+# The main application file for the EQ-Scalculator
+
+import streamlit as st
+import json
+import os
+import pandas as pd
 import plotly.express as px
-import scaling_models as sm
-from app_utils import run_solver, df_to_download
-from scaling_models._core import helpers as hp
+from _core.generic_solver import solve_relationship
 
-st.set_page_config("Scalculator", "🌐", layout="wide")
-st.title("🧮  Scalculator")
-
-
-def discover_models():
-    mods = {}
-    for info in pkgutil.iter_modules(sm.__path__):
-        name = info.name
-        if name.startswith(("test", "_")):      # skip helpers & tests
-            continue
-        mod = importlib.import_module(f"{sm.__name__}.{name}")
-        if hasattr(mod, "MODELS"):              # keep only real paper wrappers
-            mods[name] = mod
-    return mods
-
-MODELS = discover_models()   # ← call the function (delete the old one-liner)
-
-# ── driver/outputs dict (label → (code, tag)) ───────────────────
-code_map = {
-    "Length (km)"            : ("L",  "km"),
-    "Width (km)"             : ("W",  "km"),
-    "Area (km²)"             : ("A",  "km²"),
-    "Displacement (m)"       : ("D",  "m"),
-    "Mw"                     : ("Mw", ""),
-    "Moment (M0, ×10¹⁶ N·m)" : ("M0", "x16"),
+# --- Parameter Alias Configuration ---
+# This dictionary maps various names from different papers to a single,
+# canonical name for consistency in the UI.
+PARAMETER_ALIASES = {
+    'L': 'L',           # Rupture Length
+    'W': 'W',           # Rupture Width
+    'A': 'A',           # Rupture Area
+    'D': 'AD',          # Leonard's 'Average Displacement' maps to 'AD'
+    'AD': 'AD',         # Yang's 'Average Displacement'
+    'MD': 'MD',         # Yang's 'Maximum Displacement'
+    'M0': 'M0',         # Seismic Moment
+    'Mw': 'Mw',         # Moment Magnitude
+    'SRL': 'SRL',       # Surface Rupture Length
+    'L_SR': 'SRL'       # Leonard's 'Surface Rupture Length'
 }
 
-# ── create tabs ─────────────────────────────────────────────────
-tab_single, tab_batch, tab_mc, tab_plot = st.tabs(
-    ["Scalculator", "Batch (Excel)", "Monte-Carlo", "Scaling Plots"]
-)
+@st.cache_data
+def load_all_models(models_dir="scaling_models"):
+    """
+    Loads all .json model files, creating a unified list of canonical parameters.
+    """
+    all_models = {}
+    canonical_params = set()
+    
+    for author_dir in os.listdir(models_dir):
+        author_path = os.path.join(models_dir, author_dir)
+        if os.path.isdir(author_path):
+            for file in os.listdir(author_path):
+                if file.endswith(".json"):
+                    file_path = os.path.join(author_path, file)
+                    with open(file_path, 'r') as f:
+                        try:
+                            model_data = json.load(f)
+                            all_models.update(model_data)
+                            # Scan for parameters and convert to canonical names
+                            for paper in model_data.values():
+                                for fault in paper['fault_types'].values():
+                                    for key in fault.keys():
+                                        y, x = key.split('_from_')
+                                        canonical_params.add(PARAMETER_ALIASES.get(y, y))
+                                        canonical_params.add(PARAMETER_ALIASES.get(x, x))
+                        except Exception as e:
+                            st.error(f"Error parsing {file_path}: {e}")
+    
+    return all_models, sorted(list(canonical_params))
 
-# =================================================================
-#  TAB 1  –  SINGLE-RUN
-# =================================================================
-with tab_single:
-    st.header("Single calculation")
+# --- UI Setup ---
+st.set_page_config(layout="wide")
+st.title("Earthquake Scaling Relationship Calculator (EQ-Scalculator)")
+st.markdown("Select an input and output parameter, then choose a model from the sidebar to see the result.")
 
-    paper   = st.selectbox("Paper", list(MODELS), key="s_paper")
-    model   = MODELS[paper]
-    fault   = st.selectbox("Fault type", list(model.MODELS), key="s_fault")
+# --- Data Loading ---
+all_models, canonical_params = load_all_models()
 
-    value   = st.number_input("Input value", 0.0, format="%.3f", key="s_val")
-    driver  = st.selectbox("Driver", list(code_map), key="s_drv")
-    outputs = st.multiselect("Outputs", list(code_map),
-                             default=list(code_map), key="s_out")
+if not all_models:
+    st.error("No scaling models found. Make sure you have .json files in subdirectories.")
+    st.stop()
 
-    if st.button("Compute", key="s_btn"):
-        res = run_solver(model, fault, code_map[driver][0],
-                         value, outputs, code_map)
-        df = pd.DataFrame([res])
-        st.dataframe(df.style.format(precision=4, na_rep="N/A"),
-                     use_container_width=True)
+# --- User Input Sidebar ---
+st.sidebar.header("Calculation Setup")
 
-        csv, name = df_to_download(df, "single_results")
-        st.download_button("Download CSV", csv, name, use_container_width=True)
+st.sidebar.markdown("##### 1. Select Parameters")
+input_var = st.sidebar.selectbox("Input Parameter", canonical_params, index=canonical_params.index('Mw') if 'Mw' in canonical_params else 0)
+output_var = st.sidebar.selectbox("Output Parameter", canonical_params, index=canonical_params.index('SRL') if 'SRL' in canonical_params else 1)
 
-        st.caption(model.metadata(fault)["citation"])
+# --- Model Filtering Logic (with Aliases) ---
+available_models = {}
+for paper_name, paper_data in all_models.items():
+    for fault_name, fault_data in paper_data['fault_types'].items():
+        for rel_key, rel_data in fault_data.items():
+            y_param, x_param = rel_key.split('_from_')
+            
+            # Get canonical names for the relationship's parameters
+            canonical_y = PARAMETER_ALIASES.get(y_param, y_param)
+            canonical_x = PARAMETER_ALIASES.get(x_param, x_param)
+            
+            # Check for forward and inverse matches using canonical names
+            is_forward_match = (canonical_x == input_var and canonical_y == output_var)
+            is_inverse_match = (canonical_y == input_var and canonical_x == output_var)
+            
+            if is_forward_match or is_inverse_match:
+                model_id = f"{paper_name} - {fault_name}"
+                direction = 'forward' if is_forward_match else 'inverse'
+                # Store everything needed to run the calculation
+                available_models[model_id] = (paper_name, fault_name, rel_key, direction)
 
-# =================================================================
-#  TAB 2  –  BATCH / EXCEL
-# =================================================================
-with tab_batch:
-    st.header("Batch processing")
+st.sidebar.markdown("##### 2. Select Model")
+if not available_models:
+    st.sidebar.warning(f"No model found that directly relates `{input_var}` and `{output_var}`.")
+    st.stop()
 
-    paper  = st.selectbox("Paper", list(MODELS), key="b_paper")
-    model  = MODELS[paper]
-    fault  = st.selectbox("Fault type", list(model.MODELS), key="b_fault")
+selected_model_id = st.sidebar.selectbox("Available Models for this Pair", list(available_models.keys()))
 
-    uploaded   = st.file_uploader("Upload .xlsx or .csv", type=["xlsx","csv"])
-    driver_col = st.text_input("Column with driver values", "Length", key="b_col")
-    driver_par = st.selectbox("Driver parameter", list(code_map), key="b_drv")
+st.sidebar.markdown(f"##### 3. Enter Value for `{input_var}`")
+input_value = st.sidebar.number_input(f"Value", format="%.4f", value=6.0)
 
-    if uploaded and st.button("Run batch", key="b_btn"):
-        df_in = (pd.read_csv(uploaded)
-                 if uploaded.name.endswith(".csv")
-                 else pd.read_excel(uploaded))
+# Provide sensible unit options based on the canonical name
+if 'A' in input_var: unit_options = ['km^2', 'm^2']
+elif any(c in input_var for c in ['L', 'W', 'D', 'SRL']): unit_options = ['km', 'm']
+else: unit_options = ['N/A']
+input_unit = st.sidebar.selectbox("Input Unit:", unit_options)
+if input_unit == 'N/A': input_unit = None
 
-        rows = [run_solver(model, fault, code_map[driver_par][0],
-                           row[driver_col], list(code_map), code_map)
-                for _, row in df_in.iterrows()]
-        df_out = pd.concat([df_in, pd.DataFrame(rows)], axis=1)
-        st.dataframe(df_out, use_container_width=True)
+# --- Calculation and Display ---
+col1, col2 = st.columns([1, 2])
 
-        csv, name = df_to_download(df_out, "batch_results")
-        st.download_button("Download results", csv, name,
-                           use_container_width=True)
+# Unpack the model information needed for the calculation
+paper_name, fault_name, rel_key, direction = available_models[selected_model_id]
+relation_params = all_models[paper_name]['fault_types'][fault_name][rel_key]
 
-# =================================================================
-#  TAB 3  –  MONTE-CARLO
-# =================================================================
-with tab_mc:
-    st.header("Monte-Carlo exploration")
+result, result_unit_or_error = solve_relationship(relation_params, input_value, input_unit, direction)
 
-    paper  = st.selectbox("Paper", list(MODELS), key="m_paper")
-    model  = MODELS[paper]
-    fault  = st.selectbox("Fault type", list(model.MODELS), key="m_fault")
+with col1:
+    st.subheader("Calculation Result")
+    if result is not None:
+        st.success(f"**Calculated `{output_var}`:**")
+        result_str = f"{result:.4f}"
+        unit_str = result_unit_or_error or ""
+        st.metric(label=f"{output_var} ({unit_str})", value=result_str)
+    else:
+        st.error(f"**Error:** {result_unit_or_error}")
 
-    mc_driver = st.selectbox("Driver", list(code_map), key="m_drv")
-    μ         = st.number_input("Mean value", 0.0, format="%.3f", key="m_mu")
-    σ         = st.number_input("Std-dev",  0.0, format="%.3f", key="m_sigma")
-    N         = st.number_input("Simulations", 1000, step=100, key="m_N")
-    outs_mc   = st.multiselect("Outputs", list(code_map),
-                               default=list(code_map), key="m_out")
+with col2:
+    st.subheader("Visualization & Model Details")
+    if result is not None:
+        chart_data = pd.DataFrame({'Parameter': [f"{input_var} ({input_unit or ''})", f"{output_var} ({unit_str})"],'Value': [input_value, result],'Type': ['Input', 'Output']})
+        fig = px.bar(chart_data, x='Parameter', y='Value', color='Type', title='Comparison of Input and Output', labels={'Value': 'Parameter Value'}, color_discrete_map={'Input': '#1f77b4', 'Output': '#2ca02c'})
+        st.plotly_chart(fig, use_container_width=True)
 
-    if st.button("Run MC", key="m_btn"):
-        vals = np.random.normal(μ, σ, int(N))
-        data = [run_solver(model, fault, code_map[mc_driver][0],
-                           v, outs_mc, code_map) for v in vals]
-        df_mc = pd.DataFrame(data)
-
-        st.write("Mean ± 1 σ")
-        st.write(df_mc.agg(['mean', 'std']).transpose())
-
-        for lbl in outs_mc:
-            fig = px.histogram(df_mc, x=lbl, nbins=40,
-                               title=f"Distribution of {lbl}")
-            st.plotly_chart(fig, use_container_width=True)
-
-# =================================================================
-# TAB-4 – MULTI-PANEL  SCALING-RELATIONSHIP VIEWER
-# =================================================================
-with tab_plot:
-    st.header("Scaling-relationship viewer")
-
-    # ---------- tiny helpers ------------------------------------
-    def _mask(arr, lo, hi):
-        m_lo = np.ones_like(arr, bool) if lo is None else (arr >= lo)
-        m_hi = np.ones_like(arr, bool) if hi is None else (arr <  hi)
-        return m_lo & m_hi
-
-    units = dict(A="km²", L="km", W="km", D="m", Mw="Mw", M0="N·m")
-
-    # driver grids
-    base_km = np.geomspace(0.05, 700, 300)   # L, W, A
-    base_D  = np.linspace(0.01, 20, 250)     # Displacement
-    base_Mw = np.linspace(4.0, 9.0, 250)     # Mw axis
-
-    def grid_for(tok):
-        return base_D  if tok == "D" else base_km
-
-    # ---------- 1. harvest every family label -------------------
-    fams = set()
-    for mdl in MODELS.values():
-        for cfg in mdl.MODELS.values():
-            fams.update(
-                f"{p.split('-')[0][3:]}–{p.split('-')[1][3:]}"
-                for p in cfg["segments"]
-            )
-            for k in cfg["mw_relations"]:
-                if k.startswith("Mw_log"):
-                    drv = k[6:]
-                    if len(drv) > 3:                       # guard
-                        fams.add(f"Mw–{drv[3:]}")
-                elif k.endswith(("_Mw", "-Mw")):
-                    drv = k.split("_Mw")[0].split("-Mw")[0]
-                    if len(drv) > 3:
-                        fams.add(f"Mw–{drv[3:]}")
-    fams = sorted(fams)
-
-    if not fams:
-        st.info("No relations to plot."); st.stop()
-
-    # ---------- 2. colour & legend bookkeeping ------------------
-    colour_iter = iter(px.colors.qualitative.Plotly)
-    colour_map, legend_once = {}, set()
-    subplot_traces = {fam: [] for fam in fams}
-
-    # ---------- 3. build traces for every paper · fault ---------
-    for paper_key, mdl in MODELS.items():
-        for fault_key, cfg in mdl.MODELS.items():
-            label = f"{paper_key} · {fault_key}"
-            colour_map.setdefault(label, next(colour_iter))
-
-            # -- geometry ↔ geometry -----------------------------
-            for seg_key, rel in cfg["segments"].items():
-                y_code, x_code = seg_key.split("-")
-                fam = f"{y_code[3:]}–{x_code[3:]}"
-                segs = rel if isinstance(rel, list) else [rel]
-
-                grid = grid_for(x_code[3:])
-                x_m_all = grid*1_000 if x_code.endswith(("L","W")) else \
-                          grid*1e6  if x_code.endswith("A")        else grid
-
-                for seg in segs:
-                    keep = _mask(x_m_all, *hp._ranges(seg))
-                    if not keep.any():  continue
-
-                    y_m = [10**hp.piecewise_log(xx, seg) for xx in x_m_all[keep]]
-                    if y_code.endswith("A"):
-                        y_disp = np.array(y_m)/1e6
-                    elif y_code.endswith(("L","W")):
-                        y_disp = np.array(y_m)/1_000
-                    else:
-                        y_disp = y_m
-                    x_disp = grid[keep]
-
-                    subplot_traces[fam].append(
-                        px.line(x=x_disp, y=y_disp).data[0].update(
-                            name=label,
-                            legendgroup=label,
-                            showlegend=label not in legend_once,
-                            line_color=colour_map[label]
-                        )
-                    )
-                    legend_once.add(label)
-
-            # -- Mw relations ------------------------------------
-            for key, rel in cfg["mw_relations"].items():
-                segs = rel if isinstance(rel, list) else [rel]
-
-                if key.startswith("Mw_log"):             # Mw = a + b logX
-                    drv_tok = key[6:]
-                    if len(drv_tok) <= 3: continue
-                    fam = f"Mw–{drv_tok[3:]}"
-                    grid = grid_for(drv_tok[3:])
-                    x_m_all = grid*1_000 if drv_tok.endswith(("L","W")) else \
-                              grid*1e6  if drv_tok.endswith("A")        else grid
-                    for seg in segs:
-                        keep = _mask(x_m_all, *hp._ranges(seg))
-                        if not keep.any(): continue
-                        y_Mw = seg["a"] + seg["b"]*np.log10(x_m_all[keep])
-                        subplot_traces[fam].append(
-                            px.line(x=grid[keep], y=y_Mw).data[0].update(
-                                name=label,
-                                legendgroup=label,
-                                showlegend=label not in legend_once,
-                                line_color=colour_map[label],
-                                line=dict(dash="dash")
-                            )
-                        )
-                        legend_once.add(label)
-
-                elif key.endswith(("_Mw", "-Mw")):       # logX = a + b Mw
-                    drv_tok = key.split("_Mw")[0].split("-Mw")[0]
-                    if len(drv_tok) <= 3: continue
-                    fam = f"Mw–{drv_tok[3:]}"
-                    for seg in segs:
-                        Mw_axis = base_Mw
-                        logX    = seg["a"] + seg["b"]*Mw_axis
-                        x_m_all = 10**logX
-                        keep    = _mask(x_m_all, *hp._ranges(seg))
-                        if not keep.any(): continue
-                        x_disp = x_m_all/1_000 if drv_tok.endswith(("L","W")) else \
-                                 x_m_all/1e6  if drv_tok.endswith("A")        else x_m_all
-                        subplot_traces[fam].append(
-                            px.line(x=x_disp[keep], y=Mw_axis[keep]).data[0].update(
-                                name=label,
-                                legendgroup=label,
-                                showlegend=label not in legend_once,
-                                line_color=colour_map[label],
-                                line=dict(dash="dash")
-                            )
-                        )
-                        legend_once.add(label)
-
-    # ---------- 4. build subplot grid ---------------------------
-    from plotly.subplots import make_subplots
-    rows = int(np.ceil(len(fams)/2))
-    fig  = make_subplots(rows=rows, cols=2,
-                         subplot_titles=fams,
-                         horizontal_spacing=0.12,
-                         vertical_spacing=0.12)
-
-    r = c = 1
-    for fam in fams:
-        for tr in subplot_traces[fam]:
-            fig.add_trace(tr, row=r, col=c)
-
-        y_var, x_var = fam.split("–")
-        fig.update_xaxes(title=f"{x_var} ({units.get(x_var,'')})", row=r, col=c)
-        fig.update_yaxes(title=f"{y_var} ({units.get(y_var,'')})", row=r, col=c)
-
-        # caps
-        if x_var == "D": fig.update_xaxes(range=[0, 20], row=r, col=c)
-        if y_var == "D": fig.update_yaxes(range=[0, 20], row=r, col=c)
-        if x_var == "W": fig.update_xaxes(range=[0, 50], row=r, col=c)
-        if y_var == "W": fig.update_yaxes(range=[0, 50], row=r, col=c)
-        if x_var == "A": fig.update_xaxes(range=[0, 1e5], row=r, col=c)
-        if y_var == "A": fig.update_yaxes(range=[0, 1e5], row=r, col=c)
-
-        c += 1
-        if c > 2:
-            c = 1
-            r += 1
-
-    fig.update_layout(height=350*rows,
-                      legend_title="Paper · Fault type",
-                      legend_itemclick="toggle",
-                      legend_groupclick="toggleitem")
-    st.plotly_chart(fig, use_container_width=True)
+    st.markdown(f"**Model:** `{paper_name}`")
+    st.markdown(f"**Fault Type:** `{fault_name}`")
+    st.markdown(f"**Relationship Used:** `{rel_key}`")
+    with st.expander("Show Raw Model Parameters"):
+        st.json(relation_params)

@@ -1,0 +1,87 @@
+{
+  "Somerville 2014": {
+    "description": "Scaling relations between seismic moment and rupture area of earthquakes in stable continental regions from Somerville (2014), PEER Report 2014/14.",
+    "fault_types": {
+      "SCR - Aftershock Method": {
+        "A_from_M0": [
+          {
+            "source": "Table 3",
+            "equation_form": "log10(Y) = a + b * log10(X)",
+            "coefficients": {
+              "a": -14.876,
+              "b": 0.66667
+            },
+            "units": {
+              "x": "dyne.cm",
+              "y": "km^2"
+            },
+            "range_x": [
+              null,
+              null
+            ]
+          }
+        ]
+      },
+      "SCR - Duration Method": {
+        "A_from_M0": [
+          {
+            "source": "Table 3",
+            "equation_form": "log10(Y) = a + b * log10(X)",
+            "coefficients": {
+              "a": -15.028,
+              "b": 0.66667
+            },
+            "units": {
+              "x": "dyne.cm",
+              "y": "km^2"
+            },
+            "range_x": [
+              null,
+              null
+            ]
+          }
+        ]
+      },
+      "SCR - Slip Model Method": {
+        "A_from_M0": [
+          {
+            "source": "Table 3",
+            "equation_form": "log10(Y) = a + b * log10(X)",
+            "coefficients": {
+              "a": -14.934,
+              "b": 0.66667
+            },
+            "units": {
+              "x": "dyne.cm",
+              "y": "km^2"
+            },
+            "range_x": [
+              null,
+              null
+            ]
+          }
+        ]
+      },
+      "SCR - Combined Methods": {
+        "A_from_M0": [
+          {
+            "source": "Table 3",
+            "equation_form": "log10(Y) = a + b * log10(X)",
+            "coefficients": {
+              "a": -14.946,
+              "b": 0.66667
+            },
+            "units": {
+              "x": "dyne.cm",
+              "y": "km^2"
+            },
+            "range_x": [
+              null,
+              null
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

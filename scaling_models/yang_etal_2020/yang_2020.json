@@ -1,0 +1,31 @@
+{
+  "Yang et al. 2020": {
+    "description": "Scaling relationships for Australian intraplate reverse-faulting earthquakes from Yang et al. (2020), GSA Bulletin.",
+    "fault_types": {
+      "SCR - Reverse": {
+        "MD_from_Mw": [
+          {
+            "description": "Maximum Displacement from Moment Magnitude (Australia+Ungava Fit)",
+            "source": "Figure 6A",
+            "equation_form": "log10(Y) = a + b * X",
+            "coefficients": { "a": -2.38, "b": 0.43 },
+            "std_dev_a": 0.12,
+            "units": { "x": null, "y": "m" },
+            "range_x": [4.7, 6.6]
+          }
+        ],
+        "SRL_from_Mw": [
+          {
+            "description": "Surface Rupture Length from Moment Magnitude (Australia+Ungava Fit)",
+            "source": "Figure 6B",
+            "equation_form": "log10(Y) = a + b * X",
+            "coefficients": { "a": -1.93, "b": 0.50 },
+            "std_dev_a": 0.26,
+            "units": { "x": null, "y": "km" },
+            "range_x": [4.7, 6.6]
+          }
+        ]
+      }
+    }
+  }
+}
