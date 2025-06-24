@@ -4,6 +4,8 @@ import math
 import numpy as np
 from .helpers import convert_units
 
+# In _core/generic_solver.py
+
 def solve_relationship(model_params, input_val, input_unit, direction='forward'):
     """
     Solves a scaling relationship for a given input value (deterministic).
@@ -27,12 +29,36 @@ def solve_relationship(model_params, input_val, input_unit, direction='forward')
         b = segment['coefficients']['b']
         form = segment['equation_form']
         
-        min_range, max_range = segment.get('range_x') or (None, None)
+        # --- START: MORE ROBUST MODIFIED LOGIC ---
         if direction == 'forward':
-            if (min_range is not None and converted_input < min_range) or \
-               (max_range is not None and converted_input > max_range):
+            min_x, max_x = segment.get('range_x') or (None, None)
+            if (min_x is not None and converted_input < min_x) or \
+               (max_x is not None and converted_input > max_x):
                 continue
-        
+        else:  # direction == 'inverse'
+            min_x, max_x = segment.get('range_x') or (None, None)
+
+            if min_x is None and max_x is None:
+                # If the segment has no x-range, it's always valid.
+                pass
+            else:
+                # Calculate the Y-range from the X-range to see if our input fits.
+                y_at_min_x = _calculate_deterministic(form, min_x, a, b, 'forward') if min_x is not None else None
+                y_at_max_x = _calculate_deterministic(form, max_x, a, b, 'forward') if max_x is not None else None
+                
+                # If a calculation failed (e.g. log(0)), treat that boundary as open.
+                min_y, max_y = y_at_min_x, y_at_max_x
+
+                # Ensure min_y is the smaller one for the comparison.
+                if min_y is not None and max_y is not None and min_y > max_y:
+                    min_y, max_y = max_y, min_y
+
+                # Check if the input Y-value is outside the calculated Y-range of this segment.
+                if (min_y is not None and converted_input < min_y) or \
+                   (max_y is not None and converted_input > max_y):
+                    continue
+        # --- END: MORE ROBUST MODIFIED LOGIC ---
+
         output_unit = segment['units'][y_key]
         result = _calculate_deterministic(form, converted_input, a, b, direction)
         

@@ -16,6 +16,25 @@ PARAMETER_ALIASES = {
     'M0': 'M0', 'Mw': 'Mw', 'SRL': 'SRL', 'L_SR': 'SRL'
 }
 
+
+# --- Simplified Unit Options Dictionary ---
+UNIT_OPTIONS = {
+    # Grouped
+    'Length (L/SRL)': ['km', 'm'],
+    'Magnitude (Mw/M0)': ['N/A'],
+    # Ungrouped Area/Length
+    'A': ['km^2', 'm^2'],
+    'L': ['km', 'm'],
+    'W': ['km', 'm'],
+    'SRL': ['km', 'm'],
+    # Ungrouped Slip (default to meters)
+    'AD': ['m'],
+    'MD': ['m'],
+    # Ungrouped Magnitude/Moment
+    'Mw': ['N/A'],
+    'M0': ['Nm', 'dyne.cm'],
+}
+
 # --- Hanks & Kanamori (1979) Conversion Functions ---
 def m0_to_mw(m0_val, m0_unit):
     """Converts Seismic Moment (M0) to Moment Magnitude (Mw)."""
@@ -114,14 +133,26 @@ def find_available_models(input_var, output_var):
 
 tab1, tab2, tab3, tab4 = st.tabs(["Single Calculation", "Batch Processing", "Monte Carlo Simulation", "Explore Relationships"])
 
+# --- TAB 1: SINGLE CALCULATION ---
 with tab1:
     st.header("Single Parameter Calculation")
-    setup_cols = st.columns(4)
+    setup_cols = st.columns([2, 2, 3, 3])
     with setup_cols[0]:
         input_var_s = st.selectbox("Input Parameter", display_params, index=display_params.index('Magnitude (Mw/M0)') if 'Magnitude (Mw/M0)' in display_params else 0, key="s_in")
+        input_value_s = st.number_input(f"Value for {input_var_s}", format="%.4f", value=6.0, key="s_val")
+
     with setup_cols[1]:
         output_var_s = st.selectbox("Output Parameter", display_params, index=display_params.index('Length (L/SRL)') if group_lengths and 'Length (L/SRL)' in display_params else (display_params.index('SRL') if not group_lengths and 'SRL' in display_params else 1), key="s_out")
-    
+        
+        # --- Add Output unit selector ---
+        output_unit_options_s = UNIT_OPTIONS.get(output_var_s, ['N/A'])
+        if len(output_unit_options_s) > 1:
+            target_output_unit_s = st.selectbox("Output Unit", output_unit_options_s, key="s_out_unit")
+        else:
+            target_output_unit_s = output_unit_options_s[0]
+            st.text_input("Output Unit", value=target_output_unit_s, disabled=True, key="s_out_unit_dis")
+        # --- End ---
+
     available_models_s = find_available_models(input_var_s, output_var_s)
     
     with setup_cols[2]:
@@ -132,14 +163,13 @@ with tab1:
             st.warning("No model found.")
     
     with setup_cols[3]:
-        input_value_s = st.number_input(f"Value for {input_var_s}", format="%.4f", value=6.0, key="s_val")
         temp_param_for_units = input_var_s.split(" ")[0]
         c_in_unit = PARAMETER_ALIASES.get(temp_param_for_units, temp_param_for_units)
         if 'A' in c_in_unit: uo = ['km^2', 'm^2']
         elif any(c in c_in_unit for c in ['L','W','D','SRL']): uo = ['km', 'm']
         elif 'M0' in c_in_unit or 'Magnitude' in temp_param_for_units: uo = ['Nm', 'dyne.cm'] if 'M0' in get_param_aliases(input_var_s) else ['N/A']
         else: uo = ['N/A']
-        input_unit_s = st.selectbox("Unit", uo, key="s_unit")
+        input_unit_s = st.selectbox("Input Unit", uo, key="s_unit")
         if input_unit_s == 'N/A': input_unit_s = None
     
     st.divider()
@@ -160,7 +190,6 @@ with tab1:
                     p, f, rk, d = available_models_s[selected_model_id_s]
                     rp = all_models[p]['fault_types'][f][rk]
                     
-                    # Pre-convert input if necessary for grouped magnitudes
                     input_val_for_solver = input_value_s
                     input_unit_for_solver = input_unit_s
                     native_x_param = rk.split('_from_')[1] if d == 'forward' else rk.split('_from_')[0]
@@ -175,8 +204,21 @@ with tab1:
                     res = m0_to_mw(res, res_u)
                     res_u = None
 
-                if res is not None: st.metric(label=f"{output_var_s} ({res_u or ''})", value=f"{res:.4f}")
-                else: st.error("Calculation failed.")
+                if res is not None:
+                    # --- Convert to selected output unit ---
+                    final_res, final_unit = res, res_u
+                    if target_output_unit_s != 'N/A' and res_u is not None:
+                        try:
+                            final_res = convert_units(res, res_u, target_output_unit_s)
+                            final_unit = target_output_unit_s
+                        except ValueError as e:
+                            st.error(f"Unit conversion failed: {e}")
+                            final_res = None
+                    # --- End ---
+                    if final_res is not None:
+                        st.metric(label=f"{output_var_s} ({final_unit or ''})", value=f"{final_res:.4f}")
+                else: 
+                    st.error("Calculation failed.")
 
         with rc[1]:
             st.subheader("Model Details")
@@ -198,27 +240,43 @@ with tab2:
             
             st.markdown("---"); st.markdown("##### Configuration")
             b_cols = st.columns(4)
-            with b_cols[0]: input_col = st.selectbox("Select input column:", df.columns, key="b_in_col")
-            with b_cols[1]: input_var_b = st.selectbox("Input parameter type:", display_params, index=display_params.index('Magnitude (Mw/M0)') if 'Magnitude (Mw/M0)' in display_params else 0, key="b_in_var")
-            with b_cols[2]: output_var_b = st.selectbox("Output parameter to calculate:", display_params, index=display_params.index('Length (L/SRL)') if 'Length (L/SRL)' in display_params else 1, key="b_out_var")
+            with b_cols[0]:
+                input_col = st.selectbox("Select input column:", df.columns, key="b_in_col")
+            with b_cols[1]:
+                input_var_b = st.selectbox("Input parameter type:", display_params, index=display_params.index('Magnitude (Mw/M0)') if 'Magnitude (Mw/M0)' in display_params else 0, key="b_in_var")
+            with b_cols[2]:
+                output_var_b = st.selectbox("Output parameter to calculate:", display_params, index=display_params.index('Length (L/SRL)') if 'Length (L/SRL)' in display_params else 1, key="b_out_var")
             
+            with b_cols[3]:
+                # --- Add Output unit selector ---
+                output_unit_options_b = UNIT_OPTIONS.get(output_var_b, ['N/A'])
+                if len(output_unit_options_b) > 1:
+                    target_output_unit_b = st.selectbox("Desired Output Unit", output_unit_options_b, key="b_out_unit")
+                else:
+                    target_output_unit_b = output_unit_options_b[0]
+                    st.text_input("Output Unit", value=target_output_unit_b, disabled=True, key="b_out_unit_dis")
+                # --- End ---
+
+            # Input unit selector now moves to a new row for better layout
             temp_param_b = input_var_b.split(" ")[0]; c_in_unit_b = PARAMETER_ALIASES.get(temp_param_b, temp_param_b)
             if 'A' in c_in_unit_b: uo_b = ['km^2', 'm^2']
             elif any(c in c_in_unit_b for c in ['L','W','D','SRL']): uo_b = ['km', 'm']
             elif 'M0' in c_in_unit_b or 'Magnitude' in temp_param_b: uo_b = ['Nm', 'dyne.cm'] if 'M0' in get_param_aliases(input_var_b) else ['N/A']
             else: uo_b = ['N/A']
-            with b_cols[3]: input_unit_b = st.selectbox("Input data units:", uo_b, key="b_unit")
+            input_unit_b = st.selectbox("Input data units:", uo_b, key="b_unit")
             if input_unit_b == 'N/A': input_unit_b = None
-
+            
             available_models_b = find_available_models(input_var_b, output_var_b)
             selected_model_id_b = st.selectbox("Select model to apply:", list(available_models_b.keys()), key="b_model") if available_models_b else None
             
             if st.button("Process Batch File", disabled=(not selected_model_id_b), type="primary", key="b_proc_btn"):
                 with st.spinner("Calculating..."):
-                    output_col_name = f"{output_var_b}_calc"
+                    output_unit_suffix = f"_{target_output_unit_b}".replace("^","") if target_output_unit_b != 'N/A' else ''
+                    output_col_name = f"{output_var_b.split(' ')[0]}{output_unit_suffix}"
+
                     if selected_model_id_b == 'Hanks & Kanamori (1979) Definition':
                         is_m0_input = 'M0' in get_param_aliases(input_var_b)
-                        df[output_col_name] = df[input_col].apply(lambda x: m0_to_mw(pd.to_numeric(x, errors='coerce'), input_unit_b) if is_m0_input else mw_to_m0(pd.to_numeric(x, errors='coerce'), 'Nm'))
+                        df[output_col_name] = df[input_col].apply(lambda x: m0_to_mw(pd.to_numeric(x, errors='coerce'), input_unit_b) if is_m0_input else mw_to_m0(pd.to_numeric(x, errors='coerce'), target_output_unit_b))
                     else:
                         p, f, rk, d = available_models_b[selected_model_id_b]; rp = all_models[p]['fault_types'][f][rk]
                         
@@ -227,21 +285,32 @@ with tab2:
                             if pd.isna(val): return None
                             
                             native_x_param = rk.split('_from_')[1] if d == 'forward' else rk.split('_from_')[0]
+                            val_for_solver, unit_for_solver = val, input_unit_b
                             if group_magnitudes and 'Magnitude' in input_var_b and PARAMETER_ALIASES.get(native_x_param) == 'M0':
                                 native_unit = rp[0]['units']['x'] if d == 'forward' else rp[0]['units']['y']
-                                val = mw_to_m0(val, native_unit)
-                                if val is None: return None
+                                val_for_solver = mw_to_m0(val, native_unit)
+                                unit_for_solver = native_unit
+                                if val_for_solver is None: return None
                             
-                            res, res_u = solve_relationship(rp, val, input_unit_b, d)
+                            res, res_u = solve_relationship(rp, val_for_solver, unit_for_solver, d)
                             
                             if group_magnitudes and 'Magnitude' in output_var_b and res is not None and res_u is not None:
                                 res = m0_to_mw(res, res_u)
+                                res_u = None
+                            
+                            # --- Convert to selected output unit ---
+                            if res is not None and target_output_unit_b != 'N/A' and res_u is not None:
+                                try:
+                                    return convert_units(res, res_u, target_output_unit_b)
+                                except (ValueError, TypeError):
+                                    return None
+                            # --- End ---
                             return res
 
                         df[output_col_name] = df[input_col].apply(batch_solver)
                         
                     st.success("Batch processing complete!"); st.dataframe(df)
-                    st.download_button("Download Results as CSV", df.to_csv(index=False).encode('utf-8'), f"results_{uploaded_file.name}.csv", 'text/csv')
+                    st.download_button("Download Results as CSV", df.to_csv(index=False).encode('utf-8'), f"results_{uploaded_file.name}", 'text/csv')
         except Exception as e:
             st.error(f"An error occurred: {e}")
 
@@ -252,8 +321,21 @@ with tab3:
     with mc_setup[0]:
         input_var_mc = st.selectbox("Input Parameter", display_params, index=display_params.index('Magnitude (Mw/M0)') if 'Magnitude (Mw/M0)' in display_params else 0, key="mc_in")
         input_val_mc = st.number_input(f"Mean Input Value for {input_var_mc}", value=6.0, format="%.4f", key="mc_val")
+    
     with mc_setup[1]:
         output_var_mc = st.selectbox("Output Parameter", display_params, index=display_params.index('A') if 'A' in display_params else 1, key="mc_out")
+        
+        # --- Add Output unit selector ---
+        output_unit_options_mc = UNIT_OPTIONS.get(output_var_mc, ['N/A'])
+        if len(output_unit_options_mc) > 1:
+            target_output_unit_mc = st.selectbox("Output Unit", output_unit_options_mc, key="mc_out_unit")
+        else:
+            target_output_unit_mc = output_unit_options_mc[0]
+            st.text_input("Output Unit", value=target_output_unit_mc, disabled=True, key="mc_out_unit_dis")
+        # --- End ---
+
+    with mc_setup[2]:
+        num_simulations = st.number_input("Number of Simulations", 100, 50000, 10000, 100, key="mc_sims")
         temp_param_mc = input_var_mc.split(" ")[0]; c_in_unit_mc = PARAMETER_ALIASES.get(temp_param_mc, temp_param_mc)
         if 'A' in c_in_unit_mc: uo_mc = ['km^2', 'm^2']
         elif any(c in c_in_unit_mc for c in ['L','W','D','SRL']): uo_mc = ['km', 'm']
@@ -261,9 +343,7 @@ with tab3:
         else: uo_mc = ['N/A']
         input_unit_mc = st.selectbox("Input Unit", uo_mc, key="mc_unit")
         if input_unit_mc == 'N/A': input_unit_mc = None
-    with mc_setup[2]:
-        num_simulations = st.number_input("Number of Simulations", 100, 50000, 10000, 100, key="mc_sims")
-    
+
     st.markdown("---")
     st.markdown("##### Add Uncertainty to Input Value (Optional)")
     unc_type = st.radio("Input Uncertainty Type", ('None', 'Standard Deviation', 'Percentage (%)'), horizontal=True, key="unc_type")
@@ -311,27 +391,41 @@ with tab3:
                     result, result_unit = None, None
                     if chosen_model_id == 'Hanks & Kanamori (1979) Definition':
                         is_m0_input = 'M0' in get_param_aliases(input_var_mc)
-                        result = m0_to_mw(current_input, input_unit_mc) if is_m0_input else mw_to_m0(current_input, 'Nm')
-                        result_unit = None if is_m0_input else 'Nm'
+                        result = m0_to_mw(current_input, input_unit_mc) if is_m0_input else mw_to_m0(current_input, target_output_unit_mc)
+                        result_unit = None if is_m0_input else target_output_unit_mc
                     else:
                         p, f, rk, d = available_models_mc[chosen_model_id]; rp = all_models[p]['fault_types'][f][rk]
                         result, result_unit = solve_one_simulation_run(rp, current_input, input_unit_mc, d)
                     
                     if group_magnitudes and 'Magnitude' in output_var_mc and result is not None and result_unit is not None:
                         result = m0_to_mw(result, result_unit)
+                        result_unit = None
+
+                    # --- Convert to selected output unit ---
+                    final_result = result
+                    if result is not None and target_output_unit_mc != 'N/A' and result_unit is not None:
+                        try:
+                            final_result = convert_units(result, result_unit, target_output_unit_mc)
+                        except (ValueError, TypeError):
+                            final_result = None
+                    # --- End ---
                     
-                    if result is not None: all_results.append(result)
+                    if final_result is not None: 
+                        all_results.append(final_result)
                 
                 if all_results:
                     st.success("Simulation complete!")
-                    results_df = pd.DataFrame(all_results, columns=[output_var_mc])
-                    fig = px.histogram(results_df, x=output_var_mc, nbins=100, title=f"Distribution of {output_var_mc}")
+                    # --- Update column name and title for plot ---
+                    output_label = f"{output_var_mc} ({target_output_unit_mc})" if target_output_unit_mc != 'N/A' else output_var_mc
+                    results_df = pd.DataFrame(all_results, columns=[output_label])
+                    fig = px.histogram(results_df, x=output_label, nbins=100, title=f"Distribution of {output_label}")
+                    # --- End ---
                     st.plotly_chart(fig, use_container_width=True)
                     st.subheader("Summary Statistics"); stat_cols = st.columns(4)
-                    stat_cols[0].metric("Mean", f"{results_df[output_var_mc].mean():.3f}")
-                    stat_cols[1].metric("Std. Dev.", f"{results_df[output_var_mc].std():.3f}")
-                    stat_cols[2].metric("16th Percentile", f"{results_df[output_var_mc].quantile(0.16):.3f}")
-                    stat_cols[3].metric("84th Percentile", f"{results_df[output_var_mc].quantile(0.84):.3f}")
+                    stat_cols[0].metric("Mean", f"{results_df[output_label].mean():.3f}")
+                    stat_cols[1].metric("Std. Dev.", f"{results_df[output_label].std():.3f}")
+                    stat_cols[2].metric("16th Percentile", f"{results_df[output_label].quantile(0.16):.3f}")
+                    stat_cols[3].metric("84th Percentile", f"{results_df[output_label].quantile(0.84):.3f}")
 
 # --- TAB 4: EXPLORE RELATIONSHIPS ---
 with tab4:
@@ -349,8 +443,9 @@ with tab4:
         plot_df = pd.DataFrame()
         standard_units = {'A':'km^2', 'L':'km', 'W':'km', 'SRL':'km', 'AD':'m', 'MD':'m', 'M0':'Nm', 'Length (L/SRL)':'km', 'Magnitude (Mw/M0)':None}
         
+        # Note: The user has already implemented the fix for the axis labels here.
         x_plot_unit = standard_units.get(x_var.split(" ")[0])
-        y_plot_unit = standard_units.get(y_var.split(" ")[0])
+        y_plot_unit = standard_units.get(y_var) 
         
         temp_x_var_for_range = x_var.split(" ")[0]
         if 'Magnitude' in temp_x_var_for_range:
@@ -363,7 +458,29 @@ with tab4:
             x_range = np.logspace(-1, 3, 100)
             x_plot_unit = 'km' if 'Length' in x_var else standard_units.get(x_var)
 
+        # --- START OF DEBUGGING SECTION ---
+        # The block below will print debug information for each model before it's plotted.
+        #st.markdown("---")
+        #st.subheader("🛠️ Debugging Output")
+        #st.write("This information will help diagnose the plotting issue. Please review the output in both the 'grouped' and 'ungrouped' scenarios.")
+        # --- END OF DEBUGGING SECTION ---
+
         for mid, (p, f, k, d) in plot_models.items():
+            
+            # --- START: DEBUGGING STATEMENTS FOR EACH MODEL ---
+            #st.markdown(f"**Processing Model:** `{mid}`")
+            #debug_cols = st.columns(3)
+            #with debug_cols[0]:
+            #    st.write(f"Grouping Active?")
+           #     st.info(f"`{group_lengths}`")
+           # with debug_cols[1]:
+           #     st.write(f"Relationship Key:")
+           #     st.info(f"`{k}`")
+           # with debug_cols[2]:
+            #    st.write(f"Direction:")
+           #     st.info(f"`{d}`")
+            # --- END: DEBUGGING STATEMENTS FOR EACH MODEL ---
+
             y_values = []
             if p == 'virtual':
                 x_is_mw = 'Mw' in get_param_aliases(x_var)
@@ -392,6 +509,8 @@ with tab4:
             temp_df = pd.DataFrame({'x_val': x_range, 'y_val': y_values, 'Model': mid})
             plot_df = pd.concat([plot_df, temp_df])
         
+        st.markdown("---") # Separator before the plot
+
         plot_df.dropna(inplace=True)
         if not plot_df.empty:
             final_y_unit = None if group_magnitudes and 'Magnitude' in y_var else y_plot_unit
@@ -400,4 +519,3 @@ with tab4:
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.warning("Could not generate plot data for the selected models and range.")
-
