@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EQ-Scalculator - Standalone</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .form-select {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-5xl">
+        <header class="mb-8">
+            <h1 class="text-4xl font-bold text-gray-900 mb-2">Earthquake Scaling Relationship Calculator</h1>
+            <p class="text-lg text-gray-600">A standalone tool for calculating, exploring, and comparing empirical earthquake fault-scaling relationships.</p>
+        </header>
+
+        <main class="bg-white p-6 rounded-xl shadow-lg">
+            <h2 class="text-2xl font-semibold mb-6">Single Parameter Calculation</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                <!-- Input Parameter -->
+                <div>
+                    <label for="input-param" class="block text-sm font-medium text-gray-700 mb-1">Input Parameter</label>
+                    <select id="input-param" class="form-select w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></select>
+                </div>
+                <!-- Output Parameter -->
+                <div>
+                    <label for="output-param" class="block text-sm font-medium text-gray-700 mb-1">Output Parameter</label>
+                    <select id="output-param" class="form-select w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></select>
+                </div>
+                <!-- Input Value -->
+                <div>
+                    <label for="input-value" class="block text-sm font-medium text-gray-700 mb-1">Value</label>
+                    <input type="number" id="input-value" value="6.0" class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <!-- Input Unit -->
+                <div>
+                    <label for="input-unit" class="block text-sm font-medium text-gray-700 mb-1">Input Unit</label>
+                    <select id="input-unit" class="form-select w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></select>
+                </div>
+                 <!-- Available Models -->
+                <div class="md:col-span-2">
+                    <label for="model-select" class="block text-sm font-medium text-gray-700 mb-1">Available Models</label>
+                    <select id="model-select" class="form-select w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></select>
+                </div>
+                <!-- Output Unit -->
+                <div class="md:col-span-2">
+                    <label for="output-unit" class="block text-sm font-medium text-gray-700 mb-1">Output Unit</label>
+                    <select id="output-unit" class="form-select w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></select>
+                </div>
+            </div>
+
+            <div class="mt-8 flex justify-center">
+                <button id="calculate-btn" class="w-full md:w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-300 transform hover:scale-105">
+                    Calculate
+                </button>
+            </div>
+
+            <div id="results-container" class="mt-8 pt-6 border-t border-gray-200">
+                <h3 class="text-xl font-semibold mb-4">Result</h3>
+                <div id="result-display" class="p-4 bg-gray-50 rounded-lg text-center">
+                    <p class="text-gray-500">Click "Calculate" to see the result.</p>
+                </div>
+                <div id="warning-display" class="mt-4"></div>
+            </div>
+
+        </main>
+        
+        <footer class="text-center mt-8 text-sm text-gray-500">
+            <p>EQ-Scalculator Standalone App | Converted from Python by Gemini</p>
+        </footer>
+    </div>
+
+    <script>
+        // --- DATA: Embedded Scaling Models ---
+        // All models from the JSON files are stored here as a JavaScript object.
+        const ALL_MODELS = {
+          "Leonard 2014": {
+            "description": "Self-Consistent Earthquake Fault-Scaling Relations from Leonard (2014), BSSA.",
+            "fault_types": {
+              "Interplate Dip-Slip": { "A_from_L": [{ "source": "Table 3", "equation_form": "log10(Y) = a + b * log10(X)", "coefficients": { "a": 0.0, "b": 2.0 }, "std_dev_a": null, "units": { "x": "m", "y": "m^2" }, "range_x": [0, 5360] }, { "source": "Table 3", "equation_form": "log10(Y) = a + b * log10(X)", "coefficients": { "a": 1.243, "b": 1.667 }, "std_dev_a": "1.08 to 1.40", "units": { "x": "m", "y": "m^2" }, "range_x": [5360, null] }], "W_from_L": [{ "source": "Table 3", "equation_form": "log10(Y) = a + b * log10(X)", "coefficients": { "a": 0.0, "b": 1.0 }, "std_dev_a": null, "units": { "x": "m", "y": "m" }, "range_x": [0, 5360] }, { "source": "Table 3", "equation_form": "log10(Y) = a + b * log10(X)", "coefficients": { "a": 1.243, "b": 0.667 }, "std_dev_a": "1.08 to 1.40", "units": { "x": "m", "y": "m" }, "range_x": [5360, null] }], "W_from_A": [{ "source": "Table 3", "equation_form": "log10(Y) = a + b * log10(X)", "coefficients": { "a": 0.0, "b": 0.5 }, "std_dev_a": null, "units": { "x": "m^2", "y": "m" }, "range_x": [0, 28700000] }, { "source": "Table 3", "equation_form": "log10(Y) = a + b * log10(X)", "coefficients": { "a": 0.746, "b": 0.4 }, "std_dev_a": "0.65 to 0.84", "units": { "x": "m^2", "y": "m" }, "range_x": [28700000, null] }], "D_from_A": [{ "source": "Table 3", "equation_form": "log10(Y) = a + b * log10(X)", "coefficients": { "a": -4.420, "b": 0.5 }, "std_dev_a": "-4.82 to -3.92", "units": { "x": "m^2", "y": "m" }, "range_x": [0, null] }], "D_from_L": [{ "source": "Table 3", "equation_form": "log10(Y) = a + b * log10(X)", "coefficients": { "a": -4.420, "b": 1.0 }, "std_dev_a": "-4.90 to -3.82", "units": { "x": "m", "y": "m" }, "range_x": [0, 5360] }, { "source": "Table 3", "equation_form": "log10(Y) = a + b * log10(X)", "coefficients": { "a": -3.799, "b": 0.833 }, "std_dev_a": "-4.28 to -3.22", "units": { "x": "m", "y": "m" }, "range_x": [5360, null] }], "M0_from_A": [{ "source": "Table 3", "equation_form": "log10(Y) = a + b * log10(X)", "coefficients": { "a": 6.098, "b": 1.5 }, "std_dev_a": "5.70 to 6.60", "units": { "x": "m^2", "y": "Nm" }, "range_x": [0, null] }] }
+            }
+          },
+          "Yang et al. 2020": {
+            "description": "Scaling relationships for Australian intraplate reverse-faulting earthquakes from Yang et al. (2020), GSA Bulletin.",
+            "fault_types": { "SCR - Reverse": { "MD_from_Mw": [{ "description": "Maximum Displacement from Moment Magnitude (Australia+Ungava Fit)", "source": "Figure 6A", "equation_form": "log10(Y) = a + b * X", "coefficients": { "a": -2.38, "b": 0.43 }, "std_dev_a": 0.12, "units": { "x": null, "y": "m" }, "range_x": [4.7, 6.6] }], "SRL_from_Mw": [{ "description": "Surface Rupture Length from Moment Magnitude (Australia+Ungava Fit)", "source": "Figure 6B", "equation_form": "log10(Y) = a + b * X", "coefficients": { "a": -1.93, "b": 0.50 }, "std_dev_a": 0.26, "units": { "x": null, "y": "km" }, "range_x": [4.7, 6.6] }] } }
+          }
+        };
+
+        // --- CONFIGURATION: JavaScript equivalent of Python dictionaries ---
+        const PARAMETER_ALIASES = { 'L': 'L', 'W': 'W', 'A': 'A', 'D': 'AD', 'AD': 'AD', 'MD': 'MD', 'M0': 'M0', 'Mw': 'Mw', 'SRL': 'SRL', 'L_SR': 'SRL' };
+        
+        const GROUPED_PARAMS = {
+            'Length (L/SRL)': ['L', 'SRL'],
+            'Magnitude (Mw/M0)': ['Mw', 'M0']
+        };
+
+        const UNIT_OPTIONS = { 'Length (L/SRL)': ['km', 'm'], 'Magnitude (Mw/M0)': ['N/A'], 'A': ['km^2', 'm^2'], 'L': ['km', 'm'], 'W': ['km', 'm'], 'SRL': ['km', 'm'], 'AD': ['m'], 'MD': ['m'], 'Mw': ['N/A'], 'M0': ['Nm', 'dyne.cm'], };
+
+        // --- CORE LOGIC: JavaScript Solver and Helpers ---
+        // This section is a direct translation of the Python code in _core/
+        const SOLVER = (() => {
+            const _CONVERSIONS_TO_METER = { 'm': 1.0, 'km': 1000.0 };
+            const _CONVERSIONS_TO_METERSQ = { 'm^2': 1.0, 'km^2': 1e6 };
+            const _CONVERSIONS_TO_NM = { 'Nm': 1.0, 'dyne.cm': 1.0e-7 };
+
+            function convertUnits(value, fromUnit, toUnit) {
+                if (fromUnit === toUnit || !fromUnit || !toUnit) return value;
+                if (fromUnit in _CONVERSIONS_TO_METER && toUnit in _CONVERSIONS_TO_METER) {
+                    return value * _CONVERSIONS_TO_METER[fromUnit] / _CONVERSIONS_TO_METER[toUnit];
+                }
+                if (fromUnit in _CONVERSIONS_TO_METERSQ && toUnit in _CONVERSIONS_TO_METERSQ) {
+                    return value * _CONVERSIONS_TO_METERSQ[fromUnit] / _CONVERSIONS_TO_METERSQ[toUnit];
+                }
+                if (fromUnit in _CONVERSIONS_TO_NM && toUnit in _CONVERSIONS_TO_NM) {
+                    return value * _CONVERSIONS_TO_NM[fromUnit] / _CONVERSIONS_TO_NM[toUnit];
+                }
+                throw new Error(`Cannot convert from '${fromUnit}' to '${toUnit}'`);
+            }
+
+            function m0ToMw(m0, m0Unit) {
+                if (m0 === null || m0Unit === null) return null;
+                const m0DyneCm = convertUnits(m0, m0Unit, 'dyne.cm');
+                if (m0DyneCm <= 0) return null;
+                return (2 / 3) * Math.log10(m0DyneCm) - 10.7;
+            }
+
+            function mwToM0(mw, targetUnit) {
+                if (mw === null || targetUnit === null) return null;
+                const m0DyneCm = Math.pow(10, (mw + 10.7) * 1.5);
+                return convertUnits(m0DyneCm, 'dyne.cm', targetUnit);
+            }
+
+            function _calculateDeterministic(form, x, a, b, direction) {
+                try {
+                    if (x === null) return null;
+                    x = parseFloat(x);
+                    if (form === "log10(Y) = a + b * log10(X)") {
+                        if (x <= 0) return null;
+                        if (direction === 'forward') return Math.pow(10, a + b * Math.log10(x));
+                        else return Math.pow(10, (Math.log10(x) - a) / b);
+                    } else if (form === "Y = a + b * log10(X)") {
+                        if (x <= 0) return null;
+                        if (direction === 'forward') return a + b * Math.log10(x);
+                        else return Math.pow(10, (x - a) / b);
+                    } else if (form === "log10(Y) = a + b * X") {
+                        if (direction === 'forward') return Math.pow(10, a + b * x);
+                        else {
+                            if (x <= 0) return null;
+                            return (Math.log10(x) - a) / b;
+                        }
+                    }
+                } catch (e) {
+                    return null;
+                }
+                return null;
+            }
+            
+            function _getTargetSegment(modelParams, convertedInput, direction) {
+                 if (convertedInput === null) return null;
+
+                for (const segment of modelParams) {
+                    const [min_x, max_x] = segment.range_x || [null, null];
+                    let isInRange = false;
+                    if (direction === 'forward') {
+                        if ((min_x === null || convertedInput >= min_x) && (max_x === null || convertedInput < max_x)) {
+                            isInRange = true;
+                        }
+                    } else { // inverse
+                        const y_at_min_x = _calculateDeterministic(segment.equation_form, min_x, segment.coefficients.a, segment.coefficients.b, 'forward');
+                        const y_at_max_x = _calculateDeterministic(segment.equation_form, max_x, segment.coefficients.a, segment.coefficients.b, 'forward');
+                        const [min_y, max_y] = (y_at_min_x === null || y_at_max_x === null || y_at_min_x < y_at_max_x) ? [y_at_min_x, y_at_max_x] : [y_at_max_x, y_at_min_x];
+
+                        if ((min_y === null || convertedInput >= min_y) && (max_y === null || convertedInput < max_y)) {
+                            isInRange = true;
+                        }
+                    }
+                    if (isInRange) return segment;
+                }
+                // Extrapolation logic
+                if (direction === 'forward') {
+                    const firstSegmentMin = modelParams[0].range_x ? modelParams[0].range_x[0] : null;
+                    if (firstSegmentMin !== null && convertedInput < firstSegmentMin) {
+                        return modelParams[0];
+                    }
+                    return modelParams[modelParams.length - 1];
+                } else {
+                    const yAtFirstMin = _calculateDeterministic(modelParams[0].equation_form, modelParams[0].range_x[0], modelParams[0].coefficients.a, modelParams[0].coefficients.b, 'forward');
+                     if (yAtFirstMin !== null && convertedInput < yAtFirstMin) {
+                        return modelParams[0];
+                    }
+                    return modelParams[modelParams.length - 1];
+                }
+            }
+
+            return {
+                solveRelationship: (modelParams, inputVal, inputUnit, direction) => {
+                    const xKey = direction === 'forward' ? 'x' : 'y';
+                    const yKey = direction === 'forward' ? 'y' : 'x';
+                    const modelInputUnit = modelParams[0].units[xKey];
+                    let convertedInput;
+                    try {
+                        convertedInput = modelInputUnit ? convertUnits(inputVal, inputUnit, modelInputUnit) : inputVal;
+                    } catch (e) {
+                        return { result: null, info: e.message };
+                    }
+                    
+                    const targetSegment = _getTargetSegment(modelParams, convertedInput, direction);
+                    if (!targetSegment) return { result: null, info: "Could not identify a model segment." };
+                    
+                    const result = _calculateDeterministic(targetSegment.equation_form, convertedInput, targetSegment.coefficients.a, targetSegment.coefficients.b, direction);
+                    if (result === null) return { result: null, info: "Mathematical error (e.g., log of zero)." };
+                    
+                    return { result, info: targetSegment.units[yKey] };
+                },
+                checkIfExtrapolating: (modelParams, inputVal, inputUnit, direction) => {
+                    const xKey = direction === 'forward' ? 'x' : 'y';
+                    let convertedInput;
+                     try {
+                        convertedInput = modelParams[0].units[xKey] ? convertUnits(inputVal, inputUnit, modelParams[0].units[xKey]) : inputVal;
+                    } catch (e) {
+                        return null;
+                    }
+                    
+                    for (const segment of modelParams) {
+                        const [min_x, max_x] = segment.range_x || [null, null];
+                         if (direction === 'forward') {
+                            if ((min_x === null || convertedInput >= min_x) && (max_x === null || convertedInput < max_x)) return null;
+                        } else {
+                            const y_at_min_x = _calculateDeterministic(segment.equation_form, min_x, segment.coefficients.a, segment.coefficients.b, 'forward');
+                            const y_at_max_x = _calculateDeterministic(segment.equation_form, max_x, segment.coefficients.a, segment.coefficients.b, 'forward');
+                            const [min_y, max_y] = (y_at_min_x === null || y_at_max_x === null || y_at_min_x < y_at_max_x) ? [y_at_min_x, y_at_max_x] : [y_at_max_x, y_at_min_x];
+
+                            if ((min_y === null || convertedInput >= min_y) && (max_y === null || convertedInput < max_y)) return null;
+                        }
+                    }
+                    return "Warning: Input is outside the model's recommended validity range. The result is an extrapolation.";
+                },
+                m0ToMw, mwToM0, convertUnits
+            };
+        })();
+        
+        // --- UI LOGIC: Controls the dynamic parts of the webpage ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const ui = {
+                inputParam: document.getElementById('input-param'),
+                outputParam: document.getElementById('output-param'),
+                inputValue: document.getElementById('input-value'),
+                inputUnit: document.getElementById('input-unit'),
+                outputUnit: document.getElementById('output-unit'),
+                modelSelect: document.getElementById('model-select'),
+                calculateBtn: document.getElementById('calculate-btn'),
+                resultDisplay: document.getElementById('result-display'),
+                warningDisplay: document.getElementById('warning-display'),
+            };
+
+            const allParams = Object.keys(UNIT_OPTIONS);
+            
+            function populateSelect(selectElement, options) {
+                selectElement.innerHTML = '';
+                options.forEach(opt => {
+                    const option = document.createElement('option');
+                    option.value = opt;
+                    option.textContent = opt;
+                    selectElement.appendChild(option);
+                });
+            }
+
+            function updateUI() {
+                const selectedInput = ui.inputParam.value;
+                const selectedOutput = ui.outputParam.value;
+
+                // Update available models
+                const availableModels = findAvailableModels(selectedInput, selectedOutput);
+                populateSelect(ui.modelSelect, Object.keys(availableModels));
+
+                // Update unit dropdowns
+                populateSelect(ui.inputUnit, UNIT_OPTIONS[selectedInput] || ['N/A']);
+                populateSelect(ui.outputUnit, UNIT_OPTIONS[selectedOutput] || ['N/A']);
+                ui.inputUnit.disabled = (UNIT_OPTIONS[selectedInput] || ['N/A'])[0] === 'N/A';
+                ui.outputUnit.disabled = (UNIT_OPTIONS[selectedOutput] || ['N/A'])[0] === 'N/A';
+            }
+
+            function findAvailableModels(inputVar, outputVar) {
+                const models = {};
+                const inputAliases = GROUPED_PARAMS[inputVar] || [inputVar];
+                const outputAliases = GROUPED_PARAMS[outputVar] || [outputVar];
+
+                for (const [pName, pData] of Object.entries(ALL_MODELS)) {
+                    for (const [fName, fData] of Object.entries(pData.fault_types)) {
+                        for (const rk of Object.keys(fData)) {
+                            const [y, x] = rk.split('_from_');
+                            const cx = PARAMETER_ALIASES[x] || x;
+                            const cy = PARAMETER_ALIASES[y] || y;
+                            
+                            const modelId = `${pName} - ${fName}`;
+
+                            if (inputAliases.includes(cx) && outputAliases.includes(cy)) {
+                                models[modelId] = { p: pName, f: fName, k: rk, d: 'forward' };
+                            } else if (inputAliases.includes(cy) && outputAliases.includes(cx)) {
+                                models[modelId] = { p: pName, f: fName, k: rk, d: 'inverse' };
+                            }
+                        }
+                    }
+                }
+                 if (inputAliases.includes('M0') && outputAliases.includes('Mw') || inputAliases.includes('Mw') && outputAliases.includes('M0')) {
+                    models['Hanks & Kanamori (1979)'] = { p: 'virtual', f: 'virtual', k: 'virtual', d: 'virtual' };
+                }
+                return models;
+            }
+            
+            function calculate() {
+                const selectedInput = ui.inputParam.value;
+                const selectedOutput = ui.outputParam.value;
+                const inputVal = parseFloat(ui.inputValue.value);
+                const inputUnit = ui.inputUnit.value === 'N/A' ? null : ui.inputUnit.value;
+                const outputUnit = ui.outputUnit.value === 'N/A' ? null : ui.outputUnit.value;
+                const selectedModelId = ui.modelSelect.value;
+                
+                ui.warningDisplay.innerHTML = ''; // Clear previous warnings
+                
+                if (!selectedModelId) {
+                    ui.resultDisplay.innerHTML = `<p class="text-red-600 font-semibold">No model selected.</p>`;
+                    return;
+                }
+
+                const availableModels = findAvailableModels(selectedInput, selectedOutput);
+                const modelInfo = availableModels[selectedModelId];
+                let res, res_info, warning_msg = null;
+
+                if (modelInfo.p === 'virtual') { // H&K
+                    if (selectedInput === 'Magnitude (Mw/M0)') { // Mw -> M0
+                        res = SOLVER.mwToM0(inputVal, outputUnit);
+                        res_info = outputUnit;
+                    } else { // M0 -> Mw
+                        res = SOLVER.m0ToMw(inputVal, inputUnit);
+                        res_info = null; // Mw is unitless
+                    }
+                } else {
+                    const modelParams = ALL_MODELS[modelInfo.p].fault_types[modelInfo.f][modelInfo.k];
+                    let inputValForSolver = inputVal;
+                    let inputUnitForSolver = inputUnit;
+
+                    const nativeXParam = (modelInfo.d === 'forward') ? modelInfo.k.split('_from_')[1] : modelInfo.k.split('_from_')[0];
+                    if (selectedInput === 'Magnitude (Mw/M0)' && PARAMETER_ALIASES[nativeXParam] === 'M0') {
+                        const nativeUnit = modelParams[0].units.x;
+                        inputValForSolver = SOLVER.mwToM0(inputVal, nativeUnit);
+                        inputUnitForSolver = nativeUnit;
+                    }
+
+                    ({ result: res, info: res_info } = SOLVER.solveRelationship(modelParams, inputValForSolver, inputUnitForSolver, modelInfo.d));
+                    
+                    if(res !== null) {
+                       warning_msg = SOLVER.checkIfExtrapolating(modelParams, inputValForSolver, inputUnitForSolver, modelInfo.d);
+                    }
+                }
+
+                if (res !== null) {
+                    let finalRes = res;
+                    let finalUnit = res_info;
+
+                    if (selectedOutput === 'Magnitude (Mw/M0)' && res_info !== null) {
+                        finalRes = SOLVER.m0ToMw(res, res_info);
+                        finalUnit = null;
+                    } else if (outputUnit && finalUnit) {
+                         try {
+                            finalRes = SOLVER.convertUnits(finalRes, finalUnit, outputUnit);
+                            finalUnit = outputUnit;
+                        } catch(e) {
+                             ui.resultDisplay.innerHTML = `<p class="text-red-600 font-semibold">Unit Conversion Failed: ${e.message}</p>`;
+                             return;
+                        }
+                    }
+                    
+                    ui.resultDisplay.innerHTML = `
+                        <p class="text-gray-600 text-lg">${selectedOutput}</p>
+                        <p class="text-4xl font-bold text-blue-600 my-2">${finalRes.toFixed(4)}</p>
+                        <p class="text-gray-500">${finalUnit || ''}</p>
+                    `;
+                    
+                    if(warning_msg) {
+                        ui.warningDisplay.innerHTML = `
+                         <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-lg" role="alert">
+                           <p class="font-bold">Heads Up</p>
+                           <p>${warning_msg}</p>
+                         </div>
+                        `;
+                    }
+
+                } else {
+                    ui.resultDisplay.innerHTML = `<p class="text-red-600 font-semibold">Calculation Failed: ${res_info}</p>`;
+                }
+            }
+
+
+            // Initial Population
+            populateSelect(ui.inputParam, allParams);
+            ui.inputParam.value = 'Magnitude (Mw/M0)';
+            populateSelect(ui.outputParam, allParams);
+            ui.outputParam.value = 'Length (L/SRL)';
+            
+            updateUI();
+            
+            // Event Listeners
+            ui.inputParam.addEventListener('change', updateUI);
+            ui.outputParam.addEventListener('change', updateUI);
+            ui.calculateBtn.addEventListener('click', calculate);
+        });
+    </script>
+</body>
+</html>
