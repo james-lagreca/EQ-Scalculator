@@ -17,10 +17,20 @@ _CONVERSIONS_TO_NM = {
     'dyne.cm': 1.0e-7 # 1 Nm = 1e7 dyne.cm
 }
 
+# Base unit for slip rate is meters per year (m/yr)
+_CONVERSIONS_TO_M_PER_YR = {
+    'm/yr': 1.0,
+    'mm/yr': 0.001,      # 1 mm/yr = 0.001 m/yr
+    'm/Myr': 1.0e-6      # 1 m/Myr = 1e-6 m/yr
+}
+
 def convert_units(value, from_unit, to_unit):
     """Converts a value from one unit to another."""
     if from_unit == to_unit or from_unit is None or to_unit is None:
         return value
+    
+    if value is None:
+        return None
 
     # Length conversions
     if from_unit in _CONVERSIONS_TO_METER and to_unit in _CONVERSIONS_TO_METER:
@@ -36,6 +46,10 @@ def convert_units(value, from_unit, to_unit):
     if from_unit in _CONVERSIONS_TO_NM and to_unit in _CONVERSIONS_TO_NM:
         value_in_base = value * _CONVERSIONS_TO_NM[from_unit]
         return value_in_base / _CONVERSIONS_TO_NM[to_unit]
+        
+    # Slip Rate conversions
+    if from_unit in _CONVERSIONS_TO_M_PER_YR and to_unit in _CONVERSIONS_TO_M_PER_YR:
+        value_in_base = value * _CONVERSIONS_TO_M_PER_YR[from_unit]
+        return value_in_base / _CONVERSIONS_TO_M_PER_YR[to_unit]
 
     raise ValueError(f"Cannot convert from '{from_unit}' to '{to_unit}'")
-
