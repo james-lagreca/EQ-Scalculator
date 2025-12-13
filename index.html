@@ -34,9 +34,10 @@
         button.action-btn:hover { background-color: #ff3333; }
         .result-box { margin-top: 20px; padding: 15px; background: #e8f0fe; border-radius: 5px; display: none; border-left: 5px solid #4ea8de; }
         .error-box { margin-top: 20px; padding: 15px; background: #ffe8e8; color: #b00; border-radius: 5px; display: none; border-left: 5px solid #ff4b4b; }
+        .info-text { font-size: 0.85rem; color: #666; margin-top: 5px; }
     </style>
 
-    <!-- INLINE CONFIGURATION -->
+    <!-- INLINE CONFIGURATION (Strict JSON: No comments, no trailing commas) -->
     <script type="json" id="pyscript-config">
     {
         "packages": ["pandas", "numpy", "scipy", "plotly"],
@@ -86,11 +87,36 @@
         <div class="card">
             <h3>Calculate Single Value</h3>
             
-            <label>Select Model</label>
-            <select id="model_select_det" class="model-loader"></select>
+            <div class="row">
+                <div class="col">
+                    <label>Input Parameter (X)</label>
+                    <select id="input_var_det" class="param-selector">
+                        <option value="Mw">Mw</option>
+                        <option value="A">Area (A)</option>
+                        <option value="L">Length (L)</option>
+                        <option value="W">Width (W)</option>
+                        <option value="AD">Avg Displacement (AD)</option>
+                        <option value="MD">Max Displacement (MD)</option>
+                        <option value="M0">Moment (M0)</option>
+                    </select>
+                </div>
+                <div class="col">
+                    <label>Output Parameter (Y)</label>
+                    <select id="output_var_det" class="param-selector">
+                        <option value="A">Area (A)</option>
+                        <option value="Mw">Mw</option>
+                        <option value="L">Length (L)</option>
+                        <option value="W">Width (W)</option>
+                        <option value="AD">Avg Displacement (AD)</option>
+                        <option value="MD">Max Displacement (MD)</option>
+                        <option value="M0">Moment (M0)</option>
+                    </select>
+                </div>
+            </div>
 
-            <label>Relationship (Fault Type)</label>
-            <select id="fault_select_det"></select>
+            <label>Select Model & Relationship</label>
+            <select id="model_select_det"></select>
+            <div class="info-text">If empty, no model exists for this X -> Y combination.</div>
 
             <div class="row">
                 <div class="col">
@@ -99,13 +125,14 @@
                 </div>
                 <div class="col">
                     <label>Input Unit</label>
-                    <select id="input_unit_det">
-                        <option value="Mw">Mw</option>
-                        <option value="km">km</option>
-                        <option value="m">m</option>
-                        <option value="m^2">m²</option>
-                        <option value="km^2">km²</option>
-                    </select>
+                    <select id="input_unit_det"></select>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col">
+                    <label>Target Output Unit</label>
+                    <select id="output_unit_det"></select>
                 </div>
             </div>
 
@@ -120,16 +147,32 @@
     <div id="MonteCarlo" class="tabcontent">
         <div class="card">
             <h3>Monte Carlo Simulation</h3>
-            <p>Run multiple simulations to account for uncertainty.</p>
+            
+            <div class="row">
+                <div class="col">
+                    <label>Input Parameter</label>
+                    <select id="input_var_mc" class="param-selector">
+                        <option value="Mw">Mw</option>
+                        <option value="A">Area (A)</option>
+                        <option value="L">Length (L)</option>
+                    </select>
+                </div>
+                <div class="col">
+                    <label>Output Parameter</label>
+                    <select id="output_var_mc" class="param-selector">
+                        <option value="A">Area (A)</option>
+                        <option value="Mw">Mw</option>
+                        <option value="L">Length (L)</option>
+                    </select>
+                </div>
+            </div>
 
             <label>Select Model</label>
-            <select id="model_select_mc" class="model-loader"></select>
-            <label>Relationship</label>
-            <select id="fault_select_mc"></select>
+            <select id="model_select_mc"></select>
 
             <div class="row">
                 <div class="col">
-                    <label>Mean Value</label>
+                    <label>Mean Input Value</label>
                     <input type="number" id="input_val_mc" value="6.5">
                 </div>
                 <div class="col">
@@ -138,6 +181,17 @@
                 </div>
             </div>
             
+            <div class="row">
+                <div class="col">
+                    <label>Input Unit</label>
+                    <select id="input_unit_mc"></select>
+                </div>
+                <div class="col">
+                    <label>Output Unit</label>
+                    <select id="output_unit_mc"></select>
+                </div>
+            </div>
+
             <label>Number of Simulations</label>
             <input type="number" id="sim_count" value="1000">
 
@@ -152,10 +206,27 @@
     <div id="Explore" class="tabcontent">
         <div class="card">
             <h3>Plot Scaling Curves</h3>
+            <div class="row">
+                <div class="col">
+                    <label>X-Axis Parameter</label>
+                    <select id="input_var_plot" class="param-selector">
+                        <option value="Mw">Mw</option>
+                        <option value="A">Area (A)</option>
+                        <option value="L">Length (L)</option>
+                    </select>
+                </div>
+                <div class="col">
+                    <label>Y-Axis Parameter</label>
+                    <select id="output_var_plot" class="param-selector">
+                        <option value="A">Area (A)</option>
+                        <option value="Mw">Mw</option>
+                        <option value="L">Length (L)</option>
+                    </select>
+                </div>
+            </div>
+
             <label>Select Model</label>
-            <select id="model_select_plot" class="model-loader"></select>
-            <label>Relationship</label>
-            <select id="fault_select_plot"></select>
+            <select id="model_select_plot"></select>
             
             <button class="action-btn" py-click="plot_curve">Generate Curve</button>
             <div id="curve_plot_area" style="margin-top: 20px;"></div>
@@ -186,13 +257,17 @@
         import plotly.io as pio
         from pyodide.ffi import create_proxy
         
-        # IMPORT FROM LOGIC.PY (Assuming you did the rename step)
         from _core.logic import solve_relationship, solve_one_simulation_run, calculate_curve
+        from _core.helpers import convert_units
 
-        # --- LOAD DATA LOGIC ---
-        loaded_models = {}
+        # --- CONFIGURATION ---
+        PARAMETER_ALIASES = {'L': 'L', 'W': 'W', 'A': 'A', 'D': 'AD', 'AD': 'AD', 'MD': 'MD', 'M0': 'M0', 'Mw': 'Mw', 'SRL': 'SRL', 'L_SR': 'SRL'}
+        UNIT_OPTIONS = {
+            'A': ['km^2', 'm^2'], 'L': ['km', 'm'], 'W': ['km', 'm'], 'SRL': ['km', 'm'],
+            'AD': ['m'], 'MD': ['m'], 'Mw': ['N/A'], 'M0': ['Nm', 'dyne.cm']
+        }
         
-        # Mapping Folder Name -> File Name
+        loaded_models = {}
         model_config = {
             "leonard_2014": "leonard_2014.json",
             "somerville_2014": "somerville_2014.json",
@@ -200,104 +275,134 @@
             "yang_etal_2020": "yang_2020.json"
         }
 
-        # Helper to find the actual root key inside the JSON
-        def get_model_root(data):
-            # If data is { "Leonard 2014": {...} }, return that inner dict
-            keys = list(data.keys())
-            if len(keys) == 1:
-                return data[keys[0]]
-            return data
+        def get_model_data_root(data):
+            if 'fault_types' in data: return data
+            for key, val in data.items():
+                if isinstance(val, dict) and 'fault_types' in val: return val
+            return None
 
         def load_data():
-            # Populate all model dropdowns
-            dropdowns = ["model_select_det", "model_select_mc", "model_select_plot"]
-            
-            for d_id in dropdowns:
-                js.document.getElementById(d_id).innerHTML = ""
-
-            found_any = False
             for folder_name, file_name in model_config.items():
                 path = f"scaling_models/{folder_name}/{file_name}"
-                
                 if os.path.exists(path):
                     with open(path, 'r') as f:
-                        data = json.load(f)
-                    loaded_models[folder_name] = data
-                    found_any = True
-                    
-                    # Add options to all dropdowns
-                    for d_id in dropdowns:
-                        select = js.document.getElementById(d_id)
-                        opt = js.document.createElement("option")
-                        opt.text = folder_name.replace("_", " ").title()
-                        opt.value = folder_name
-                        select.add(opt)
+                        loaded_models[folder_name] = json.load(f)
             
-            if not found_any:
-                js.document.getElementById("err_det").style.display = "block"
-                js.document.getElementById("err_det").innerText = "Error: No model files found."
-            
-            # Trigger initial population
-            update_fault_options("model_select_det", "fault_select_det")
-            update_fault_options("model_select_mc", "fault_select_mc")
-            update_fault_options("model_select_plot", "fault_select_plot")
+            # Initial Population
+            refresh_options("det")
+            refresh_options("mc")
+            refresh_options("plot")
 
-        def update_fault_options(model_dd_id, fault_dd_id):
-            model_name = js.document.getElementById(model_dd_id).value
-            fault_select = js.document.getElementById(fault_dd_id)
-            fault_select.innerHTML = ""
+        def refresh_options(mode):
+            # 1. Get Selected Inputs/Outputs
+            in_var = js.document.getElementById(f"input_var_{mode}").value
+            out_var = js.document.getElementById(f"output_var_{mode}").value
             
-            if model_name in loaded_models:
-                data = loaded_models[model_name]
-                root = get_model_root(data) # <--- KEY FIX HERE
+            # 2. Populate Unit Dropdowns
+            in_units = UNIT_OPTIONS.get(in_var, ['N/A'])
+            out_units = UNIT_OPTIONS.get(out_var, ['N/A'])
+            
+            if mode != "plot":
+                # Populate Input Unit
+                u_sel = js.document.getElementById(f"input_unit_{mode}")
+                u_sel.innerHTML = ""
+                for u in in_units:
+                    opt = js.document.createElement("option")
+                    opt.text = u
+                    opt.value = u
+                    u_sel.add(opt)
                 
-                if 'fault_types' in root:
-                    for f_type, rels in root['fault_types'].items():
-                        for rel_name in rels.keys():
-                            opt = js.document.createElement("option")
-                            opt.text = f"{f_type}: {rel_name}"
-                            opt.value = f"{f_type}|{rel_name}"
-                            fault_select.add(opt)
+                # Populate Output Unit
+                if mode == "det" or mode == "mc":
+                    out_u_sel = js.document.getElementById(f"output_unit_{mode}") if mode == "mc" else js.document.getElementById("output_unit_det")
+                    out_u_sel.innerHTML = ""
+                    for u in out_units:
+                        opt = js.document.createElement("option")
+                        opt.text = u
+                        opt.value = u
+                        out_u_sel.add(opt)
+
+            # 3. Find Matching Models
+            model_select = js.document.getElementById(f"model_select_{mode}")
+            model_select.innerHTML = ""
+            
+            input_aliases = [in_var, 'SRL'] if in_var == 'L' else [in_var]
+            output_aliases = [out_var, 'SRL'] if out_var == 'L' else [out_var]
+
+            count = 0
+            for m_name, data in loaded_models.items():
+                root = get_model_data_root(data)
+                if not root: continue
+                
+                for f_type, rels in root['fault_types'].items():
+                    for rel_key in rels.keys():
+                        # Parse Key: "A_from_L" -> Y=A, X=L
+                        try:
+                            y_param, x_param = rel_key.split('_from_')
+                            y_can = PARAMETER_ALIASES.get(y_param, y_param)
+                            x_can = PARAMETER_ALIASES.get(x_param, x_param)
+                            
+                            direction = None
+                            # Forward: Input matches X, Output matches Y
+                            if x_can in input_aliases and y_can in output_aliases:
+                                direction = 'forward'
+                            # Inverse: Input matches Y, Output matches X
+                            elif y_can in input_aliases and x_can in output_aliases:
+                                direction = 'inverse'
+                            
+                            if direction:
+                                opt = js.document.createElement("option")
+                                nice_name = m_name.replace("_", " ").title()
+                                opt.text = f"{nice_name} | {f_type} : {rel_key}"
+                                # Store complex ID: "model_key|fault_type|rel_key|direction"
+                                opt.value = f"{m_name}|{f_type}|{rel_key}|{direction}"
+                                model_select.add(opt)
+                                count += 1
+                        except: pass
+            
+            if count == 0:
+                opt = js.document.createElement("option")
+                opt.text = "No matching models found"
+                model_select.add(opt)
 
         # Event Listeners
-        def on_det_change(e): update_fault_options("model_select_det", "fault_select_det")
-        def on_mc_change(e): update_fault_options("model_select_mc", "fault_select_mc")
-        def on_plot_change(e): update_fault_options("model_select_plot", "fault_select_plot")
+        def on_param_change_det(e): refresh_options("det")
+        def on_param_change_mc(e): refresh_options("mc")
+        def on_param_change_plot(e): refresh_options("plot")
 
-        js.document.getElementById("model_select_det").addEventListener("change", create_proxy(on_det_change))
-        js.document.getElementById("model_select_mc").addEventListener("change", create_proxy(on_mc_change))
-        js.document.getElementById("model_select_plot").addEventListener("change", create_proxy(on_plot_change))
+        js.document.getElementById("input_var_det").addEventListener("change", create_proxy(on_param_change_det))
+        js.document.getElementById("output_var_det").addEventListener("change", create_proxy(on_param_change_det))
+        
+        js.document.getElementById("input_var_mc").addEventListener("change", create_proxy(on_param_change_mc))
+        js.document.getElementById("output_var_mc").addEventListener("change", create_proxy(on_param_change_mc))
 
-        # --- DETERMINISTIC SOLVER ---
+        js.document.getElementById("input_var_plot").addEventListener("change", create_proxy(on_param_change_plot))
+        js.document.getElementById("output_var_plot").addEventListener("change", create_proxy(on_param_change_plot))
+
+        # --- CALCULATION LOGIC ---
         def calculate_deterministic(e):
             try:
-                model = js.document.getElementById("model_select_det").value
-                sel = js.document.getElementById("fault_select_det").value
+                sel_val = js.document.getElementById("model_select_det").value
+                if "|" not in sel_val: raise ValueError("No valid model selected.")
+                
+                m_name, f_type, r_key, direction = sel_val.split("|")
+                
                 val = float(js.document.getElementById("input_val_det").value)
-                unit = js.document.getElementById("input_unit_det").value
+                in_unit = js.document.getElementById("input_unit_det").value
+                target_unit = js.document.getElementById("output_unit_det").value
                 
-                f_type, rel = sel.split("|")
-                data = loaded_models[model]
-                root = get_model_root(data) # <--- KEY FIX HERE
-                params = root['fault_types'][f_type][rel]
+                root = get_model_data_root(loaded_models[m_name])
+                params = root['fault_types'][f_type][r_key]
                 
-                # Heuristic Direction Logic
-                # If the unit the user selected matches the X unit of the model, it's forward.
-                # Otherwise, assume inverse.
-                first_seg = params[0]
-                model_x_unit = first_seg.get('units', {}).get('x', '')
+                res, res_unit = solve_relationship(params, val, in_unit, direction)
                 
-                # Check mapping (e.g. m^2 vs km^2)
-                direction = 'forward'
-                if unit == model_x_unit:
-                    direction = 'forward'
-                elif 'Mw' in rel and unit == 'Mw': # Special case for Magnitude
-                     direction = 'inverse' if rel.startswith('Mw') else 'forward'
-                elif unit != model_x_unit:
-                    direction = 'inverse'
+                if res is None: raise ValueError(f"Calculation Error: {res_unit}")
+                
+                # Convert Output if needed
+                if target_unit != 'N/A' and res_unit and res_unit != target_unit:
+                    res = convert_units(res, res_unit, target_unit)
+                    res_unit = target_unit
 
-                res, res_unit = solve_relationship(params, val, unit, direction)
-                
                 out_div = js.document.getElementById("res_det")
                 out_div.style.display = "block"
                 out_div.innerText = f"Result: {res:.4f} {res_unit}"
@@ -306,62 +411,69 @@
                 js.document.getElementById("err_det").style.display = "block"
                 js.document.getElementById("err_det").innerText = str(ex)
 
-        # --- MONTE CARLO SOLVER ---
         def run_monte_carlo(e):
             try:
-                model = js.document.getElementById("model_select_mc").value
-                sel = js.document.getElementById("fault_select_mc").value
+                sel_val = js.document.getElementById("model_select_mc").value
+                if "|" not in sel_val: raise ValueError("No valid model selected.")
+                m_name, f_type, r_key, direction = sel_val.split("|")
+                
                 mean = float(js.document.getElementById("input_val_mc").value)
                 std = float(js.document.getElementById("input_unc_mc").value)
+                in_unit = js.document.getElementById("input_unit_mc").value
+                target_unit = js.document.getElementById("output_unit_mc").value
                 sims = int(js.document.getElementById("sim_count").value)
                 
-                f_type, rel = sel.split("|")
-                data = loaded_models[model]
-                root = get_model_root(data)
-                params = root['fault_types'][f_type][rel]
+                root = get_model_data_root(loaded_models[m_name])
+                params = root['fault_types'][f_type][r_key]
                 
                 results = []
                 for _ in range(sims):
                     iter_val = np.random.normal(mean, std)
-                    # For simplicity in this demo, assuming Forward / Mw
-                    # You might need to add direction logic here too similar to above
-                    res, u = solve_one_simulation_run(params, iter_val, "Mw", "forward", True)
-                    if res: results.append(res)
+                    res, u = solve_one_simulation_run(params, iter_val, in_unit, direction, True)
+                    if res:
+                        if target_unit != 'N/A' and u and u != target_unit:
+                            res = convert_units(res, u, target_unit)
+                        results.append(res)
+                
+                if not results: raise ValueError("No valid results.")
                 
                 df = pd.DataFrame({'Result': results})
                 fig = px.histogram(df, x='Result', nbins=30, title="Monte Carlo Distribution")
-                
                 graphJSON = json.dumps(fig.to_dict(), cls=pio.utils.PlotlyJSONEncoder)
                 js.Plotly.newPlot("mc_plot_area", js.JSON.parse(graphJSON))
                 js.document.getElementById("err_mc").style.display = "none"
-                
             except Exception as ex:
                 js.document.getElementById("err_mc").style.display = "block"
                 js.document.getElementById("err_mc").innerText = str(ex)
 
-        # --- PLOTTING SOLVER ---
         def plot_curve(e):
             try:
-                model = js.document.getElementById("model_select_plot").value
-                sel = js.document.getElementById("fault_select_plot").value
-                f_type, rel = sel.split("|")
+                sel_val = js.document.getElementById("model_select_plot").value
+                if "|" not in sel_val: raise ValueError("No valid model selected.")
+                m_name, f_type, r_key, direction = sel_val.split("|")
                 
-                data = loaded_models[model]
-                root = get_model_root(data)
-                params = root['fault_types'][f_type][rel]
+                root = get_model_data_root(loaded_models[m_name])
+                params = root['fault_types'][f_type][r_key]
                 
-                x_vals = np.linspace(4.0, 9.0, 50)
-                y_vals, y_unit = calculate_curve(params, x_vals, "Mw", "forward")
+                # Determine X-range based on input var (simple heuristic)
+                in_var = js.document.getElementById("input_var_plot").value
+                in_unit = UNIT_OPTIONS.get(in_var, ['N/A'])[0] # Default to first unit
                 
-                df = pd.DataFrame({'Mw': x_vals, 'Result': y_vals})
-                fig = px.line(df, x='Mw', y='Result', title=f"{rel} Scaling Curve")
+                if in_var == 'Mw': x_vals = np.linspace(4.0, 9.0, 50)
+                elif in_var == 'A': x_vals = np.logspace(1, 5, 50) # 10 to 100,000 km2
+                elif in_var == 'L': x_vals = np.logspace(0, 3, 50) # 1 to 1000 km
+                else: x_vals = np.linspace(1, 100, 50)
+
+                y_vals, y_unit = calculate_curve(params, x_vals, in_unit, direction)
+                
+                df = pd.DataFrame({'X': x_vals, 'Y': y_vals})
+                fig = px.line(df, x='X', y='Y', title=f"{r_key} Scaling Curve")
                 
                 graphJSON = json.dumps(fig.to_dict(), cls=pio.utils.PlotlyJSONEncoder)
                 js.Plotly.newPlot("curve_plot_area", js.JSON.parse(graphJSON))
             except Exception as ex:
                 js.alert(str(ex))
 
-        # Initial Load
         load_data()
 
     </script>
