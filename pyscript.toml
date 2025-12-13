@@ -6,7 +6,7 @@ packages = ["pandas", "numpy", "scipy", "plotly"]
 [[fetch]]
 from = "_core"
 to_folder = "_core"
-files = ["generic_solver.py", "helpers.py"]
+files = ["logic.py", "helpers.py"]
 
 # --- FETCH MODELS (All 4 must be here) ---
 
