@@ -146,28 +146,47 @@
 
         # --- LOAD DATA LOGIC ---
         loaded_models = {}
-        available_model_files = ["leonard_2014", "somerville_2014"] # Add more names here manually if needed
+        
+        # KEY FIX: Mapping Folder Name -> File Name
+        # This fixes the issue where Yang's file is named 'yang_2020.json' but inside 'yang_etal_2020' folder
+        model_config = {
+            "leonard_2014": "leonard_2014.json",
+            "somerville_2014": "somerville_2014.json",
+            "wells_coppersmith_1994": "wells_coppersmith_1994.json",
+            "yang_etal_2020": "yang_2020.json"
+        }
 
         def load_data():
             # Populate all model dropdowns
             dropdowns = ["model_select_det", "model_select_mc", "model_select_plot"]
             
-            for m_name in available_model_files:
-                path = f"scaling_models/{m_name}/{m_name}.json"
+            # Clear existing options first to prevent duplicates
+            for d_id in dropdowns:
+                js.document.getElementById(d_id).innerHTML = ""
+
+            found_any = False
+            for folder_name, file_name in model_config.items():
+                # We construct the path based on how PyScript fetches it
+                path = f"scaling_models/{folder_name}/{file_name}"
+                
                 if os.path.exists(path):
                     with open(path, 'r') as f:
                         data = json.load(f)
-                    loaded_models[m_name] = data
+                    loaded_models[folder_name] = data
+                    found_any = True
                     
                     # Add options to all dropdowns
                     for d_id in dropdowns:
                         select = js.document.getElementById(d_id)
                         opt = js.document.createElement("option")
-                        opt.text = m_name
-                        opt.value = m_name
+                        opt.text = folder_name.replace("_", " ").title() # Make it look nicer
+                        opt.value = folder_name
                         select.add(opt)
             
-            # Trigger initial population of fault types
+            if not found_any:
+                js.alert("No model files found! Please check pyscript.toml paths.")
+            
+            # Trigger initial population of fault types for the first loaded model
             update_fault_options("model_select_det", "fault_select_det")
             update_fault_options("model_select_mc", "fault_select_mc")
             update_fault_options("model_select_plot", "fault_select_plot")
@@ -179,6 +198,7 @@
             
             if model_name in loaded_models:
                 data = loaded_models[model_name]
+                # Some JSONs have the model name as a root key, some don't. Try both.
                 root = data.get(model_name, data)
                 
                 if 'fault_types' in root:
@@ -207,11 +227,13 @@
                 unit = js.document.getElementById("input_unit_det").value
                 
                 f_type, rel = sel.split("|")
-                params = loaded_models[model].get(model, loaded_models[model])['fault_types'][f_type][rel]
+                # Dig for data
+                data = loaded_models[model]
+                root = data.get(model, data)
+                params = root['fault_types'][f_type][rel]
                 
                 # Determine direction (Simplified logic)
                 direction = 'forward' if unit in ['Mw', 'km', 'm'] else 'inverse' 
-                # (You might need smarter unit logic here based on your JSON structure)
 
                 res, res_unit = solve_relationship(params, val, unit, direction)
                 
@@ -233,14 +255,16 @@
                 sims = int(js.document.getElementById("sim_count").value)
                 
                 f_type, rel = sel.split("|")
-                params = loaded_models[model].get(model, loaded_models[model])['fault_types'][f_type][rel]
+                data = loaded_models[model]
+                root = data.get(model, data)
+                params = root['fault_types'][f_type][rel]
                 
                 results = []
                 # Simple loop for simulation
                 for _ in range(sims):
-                    # Randomize input
                     iter_val = np.random.normal(mean, std)
-                    # Run logic (assuming input is Mw for now)
+                    # We assume Input Unit matches Mean Value Unit (e.g. Mw)
+                    # You might want to add a unit selector for MC input specifically
                     res, u = solve_one_simulation_run(params, iter_val, "Mw", "forward", True)
                     if res: results.append(res)
                 
@@ -248,7 +272,6 @@
                 df = pd.DataFrame({'Result': results})
                 fig = px.histogram(df, x='Result', nbins=30, title="Monte Carlo Distribution")
                 
-                # Render to div
                 graphJSON = json.dumps(fig.to_dict(), cls=pio.utils.PlotlyJSONEncoder)
                 js.Plotly.newPlot("mc_plot_area", JSON.parse(graphJSON))
                 
@@ -262,7 +285,10 @@
                 model = js.document.getElementById("model_select_plot").value
                 sel = js.document.getElementById("fault_select_plot").value
                 f_type, rel = sel.split("|")
-                params = loaded_models[model].get(model, loaded_models[model])['fault_types'][f_type][rel]
+                
+                data = loaded_models[model]
+                root = data.get(model, data)
+                params = root['fault_types'][f_type][rel]
                 
                 # Generate X range (e.g. Mw 4.0 to 9.0)
                 x_vals = np.linspace(4.0, 9.0, 50)
