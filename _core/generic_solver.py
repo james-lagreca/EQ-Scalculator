@@ -1,5 +1,3 @@
-# In _core/generic_solver.py
-
 import math
 import numpy as np
 import pandas as pd
@@ -34,11 +32,6 @@ def _calculate_deterministic(form, x, a, b, direction):
     return None
 
 def _get_target_segment(model_params, converted_input, direction):
-    """
-    Finds the appropriate model segment for a given input value.
-    If the value is outside all defined ranges, it selects the
-    first or last segment to allow for extrapolation.
-    """
     if converted_input is None: return None
     
     for segment in model_params:
@@ -47,7 +40,7 @@ def _get_target_segment(model_params, converted_input, direction):
             min_x, max_x = segment.get('range_x') or (None, None)
             if (min_x is None or converted_input >= min_x) and (max_x is None or converted_input < max_x):
                 is_in_range = True
-        else:  # 'inverse' direction needs to check against the Y-range
+        else:  # 'inverse' direction
             min_x, max_x = segment.get('range_x') or (None, None)
             y_at_min_x = _calculate_deterministic(segment['equation_form'], min_x, segment['coefficients']['a'], segment['coefficients']['b'], 'forward') if min_x is not None else None
             y_at_max_x = _calculate_deterministic(segment['equation_form'], max_x, segment['coefficients']['a'], segment['coefficients']['b'], 'forward') if max_x is not None else None
@@ -64,7 +57,6 @@ def _get_target_segment(model_params, converted_input, direction):
 
 
 def solve_relationship(model_params, input_val, input_unit, direction='forward'):
-    """Solves a scaling relationship deterministically."""
     x_key = 'x' if direction == 'forward' else 'y'
     y_key = 'y' if direction == 'forward' else 'x'
     try:
@@ -80,10 +72,8 @@ def solve_relationship(model_params, input_val, input_unit, direction='forward')
     return result, target_segment['units'][y_key]
 
 def check_if_extrapolating(model_params, input_val, input_unit, direction='forward'):
-    """Checks if the input value is outside the model's validity range."""
     x_key = 'x' if direction == 'forward' else 'y'
     try:
-        # --- FIX: Define model_input_unit before using it ---
         model_input_unit = model_params[0]['units'][x_key]
         converted_input = convert_units(input_val, input_unit, model_input_unit) if model_input_unit else input_val
     except (ValueError, TypeError):
@@ -108,7 +98,6 @@ def check_if_extrapolating(model_params, input_val, input_unit, direction='forwa
     return None
 
 def solve_one_simulation_run(model_params, input_val, input_unit, direction='forward', include_model_uncertainty=True):
-    """Performs a single stochastic calculation for a Monte Carlo simulation."""
     x_key = 'x' if direction == 'forward' else 'y'
     y_key = 'y' if direction == 'forward' else 'x'
     try:
@@ -136,7 +125,6 @@ def solve_one_simulation_run(model_params, input_val, input_unit, direction='for
     return result, target_segment['units'][y_key]
 
 def calculate_curve(model_params, x_values, input_unit, direction='forward'):
-    """Calculates the Y values for a given range of X values to plot a curve."""
     y_values, output_unit = [], ""
     for x in x_values:
         y, unit_or_error = solve_relationship(model_params, x, input_unit, direction)
