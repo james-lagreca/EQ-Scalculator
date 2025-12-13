@@ -1,30 +1,14 @@
 name = "EQ Scalculator"
 description = "Earthquake Scaling Relationship Calculator"
-# VITAL: You must list all libraries here
 packages = ["pandas", "numpy", "scipy", "plotly"]
 
-# 1. FETCH CORE LOGIC
+# --- CORE LOGIC ---
 [[fetch]]
 from = "_core"
 to_folder = "_core"
 files = ["generic_solver.py", "helpers.py", "__init__.py"]
 
-# 2. FETCH DATA MODELS
-# (Double check these folder names match your repo exactly!)
-
-[[fetch]]
-from = "scaling_models/leonard_2014"
-to_folder = "scaling_models/leonard_2014"
-files = ["leonard_2014.json"]name = "EQ Scalculator"
-description = "Earthquake Scaling Relationship Calculator"
-packages = ["pandas", "numpy", "scipy", "plotly"]
-
-[[fetch]]
-from = "_core"
-to_folder = "_core"
-files = ["generic_solver.py", "helpers.py", "__init__.py"]
-
-# --- MODELS ---
+# --- SCALING MODELS ---
 
 [[fetch]]
 from = "scaling_models/leonard_2014"
@@ -45,14 +29,3 @@ files = ["wells_coppersmith_1994.json"]
 from = "scaling_models/yang_etal_2020"
 to_folder = "scaling_models/yang_etal_2020"
 files = ["yang_2020.json"]
-
-[[fetch]]
-from = "scaling_models/somerville_2014"
-to_folder = "scaling_models/somerville_2014"
-files = ["somerville_2014.json"]
-
-[[fetch]]
-from = "scaling_models/yang_etal_2020"
-to_folder = "scaling_models/yang_etal_2020"
-files = ["yang_2020.json"] 
-# Note: I saw 'yang_2020.json' in your earlier file tree, ensure this name is correct!

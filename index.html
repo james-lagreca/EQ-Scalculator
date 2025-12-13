@@ -147,7 +147,7 @@
         # --- LOAD DATA LOGIC ---
         loaded_models = {}
         
-        # KEY FIX: Mapping Folder Name -> File Name
+        # Mapping Folder Name -> File Name
         # This fixes the issue where Yang's file is named 'yang_2020.json' but inside 'yang_etal_2020' folder
         model_config = {
             "leonard_2014": "leonard_2014.json",
@@ -184,7 +184,8 @@
                         select.add(opt)
             
             if not found_any:
-                js.alert("No model files found! Please check pyscript.toml paths.")
+                js.document.getElementById("err_det").style.display = "block"
+                js.document.getElementById("err_det").innerText = "Error: No model files found. Check your pyscript.toml paths."
             
             # Trigger initial population of fault types for the first loaded model
             update_fault_options("model_select_det", "fault_select_det")
