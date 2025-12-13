@@ -1,0 +1,30 @@
+name = "EQ Scalculator"
+description = "Earthquake Scaling Relationship Calculator"
+packages = ["pandas", "numpy", "scipy"]
+
+# 1. FETCH CORE LOGIC
+[[fetch]]
+from = "_core"
+to_folder = "_core"
+files = ["generic_solver.py", "helpers.py", "__init__.py"]
+
+# 2. FETCH DATA MODELS 
+# (You must add every model folder you want to use here)
+
+# Leonard 2014
+[[fetch]]
+from = "scaling_models/leonard_2014"
+to_folder = "scaling_models/leonard_2014"
+files = ["leonard_2014.json"]
+
+# Somerville 2014
+[[fetch]]
+from = "scaling_models/somerville_2014"
+to_folder = "scaling_models/somerville_2014"
+files = ["somerville_2014.json"]
+
+# Wells & Coppersmith 1994 (If you have it)
+[[fetch]]
+from = "scaling_models/wells_coppersmith_1994"
+to_folder = "scaling_models/wells_coppersmith_1994"
+files = ["wells_coppersmith_1994.json"]

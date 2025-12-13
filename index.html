@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EQ Scaling Calculator</title>
+    
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+
+    <style>
+        body { font-family: -apple-system, sans-serif; background-color: #f0f2f6; padding: 20px; color: #31333F; }
+        .container { max-width: 700px; margin: 0 auto; background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1 { margin-top: 0; color: #0e1117; font-size: 1.8rem; }
+        label { display: block; margin-top: 15px; font-weight: 600; font-size: 0.9rem; }
+        select, input { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #d6d6d6; border-radius: 5px; box-sizing: border-box; font-size: 1rem; }
+        button { width: 100%; background-color: #ff4b4b; color: white; border: none; padding: 12px; border-radius: 5px; margin-top: 25px; font-size: 1rem; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #ff3333; }
+        .result-box { margin-top: 20px; padding: 15px; background: #e8f0fe; border-radius: 5px; display: none; border-left: 5px solid #4ea8de; }
+        .error-box { margin-top: 20px; padding: 15px; background: #ffe8e8; color: #b00; border-radius: 5px; display: none; border-left: 5px solid #ff4b4b; }
+        .spinner { display: none; color: #666; margin-top: 10px; font-style: italic; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>EQ Scaling Calculator</h1>
+    <p>Deterministic calculation using scaling models.</p>
+
+    <label for="model_select">Select Model</label>
+    <select id="model_select">
+        <option value="leonard_2014">Leonard (2014)</option>
+        <option value="somerville_2014">Somerville (2014)</option>
+        <option value="wells_coppersmith_1994">Wells & Coppersmith (1994)</option>
+    </select>
+
+    <label for="fault_type_select">Fault Type / Relationship</label>
+    <select id="fault_type_select">
+        <option value="" disabled selected>Select a model first...</option>
+    </select>
+
+    <div style="display: flex; gap: 10px;">
+        <div style="flex: 2;">
+            <label for="input_val">Input Value</label>
+            <input type="number" id="input_val" step="0.1" value="6.5">
+        </div>
+        <div style="flex: 1;">
+            <label for="input_unit">Input Unit</label>
+            <select id="input_unit">
+                <option value="Mw">Mw</option>
+                <option value="km">km</option>
+                <option value="m">m</option>
+                <option value="km^2">km²</option>
+            </select>
+        </div>
+    </div>
+
+    <button id="calc_btn" py-click="run_calculation">Calculate</button>
+    <div id="spinner" class="spinner">Calculating...</div>
+
+    <div id="result_area" class="result-box">
+        <h3 style="margin-top:0;">Result</h3>
+        <p style="font-size: 1.2rem;">
+            <strong id="res_val">--</strong> <span id="res_unit">--</span>
+        </p>
+        <p id="res_msg" style="font-size: 0.9rem; color: #666;"></p>
+    </div>
+    
+    <div id="error_area" class="error-box"></div>
+</div>
+
+<script type="py" config="pyscript.toml">
+import json
+import js
+import os
+from pyodide.ffi import create_proxy
+from _core.generic_solver import solve_relationship, check_if_extrapolating
+
+# --- 1. GLOBAL STATE TO STORE LOADED MODELS ---
+loaded_models = {}
+
+# --- 2. FUNCTION TO LOAD DATA ---
+def load_model_data(model_name):
+    """Loads JSON data for the selected model from the virtual file system."""
+    try:
+        # Construct path based on TOML structure
+        file_path = f"scaling_models/{model_name}/{model_name}.json"
+        
+        if not os.path.exists(file_path):
+            return None, f"File not found: {file_path}"
+
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+        return data, None
+    except Exception as e:
+        return None, str(e)
+
+# --- 3. UPDATE DROPDOWN OPTIONS ---
+def on_model_change(event):
+    """When Model changes, populate the Fault Type dropdown."""
+    model_name = js.document.getElementById("model_select").value
+    fault_select = js.document.getElementById("fault_type_select")
+    
+    # Clear existing options
+    fault_select.innerHTML = ""
+    
+    # Load data
+    data, error = load_model_data(model_name)
+    if error:
+        opt = js.document.createElement("option")
+        opt.text = "Error loading model"
+        fault_select.add(opt)
+        return
+
+    loaded_models[model_name] = data
+    
+    # Iterate through the JSON structure to find relationships
+    # Structure is usually: Model -> Fault Types -> Relationships
+    model_root = data.get(model_name, data) # Handle if root key matches filename
+    
+    if 'fault_types' in model_root:
+        for fault_type, relations in model_root['fault_types'].items():
+            for relation_name in relations.keys():
+                # Create a readable name like "SCR: Area from Mw"
+                readable_name = f"{fault_type}: {relation_name}"
+                
+                # Create Option Element
+                opt = js.document.createElement("option")
+                opt.text = readable_name
+                # Value stores the path to data: "fault_type|relation_name"
+                opt.value = f"{fault_type}|{relation_name}" 
+                fault_select.add(opt)
+
+# Bind the change event manually to Python function
+js.document.getElementById("model_select").addEventListener("change", create_proxy(on_model_change))
+
+# Trigger once on load to populate initial list
+on_model_change(None)
+
+# --- 4. CALCULATION LOGIC ---
+def run_calculation(event):
+    js.document.getElementById("result_area").style.display = "none"
+    js.document.getElementById("error_area").style.display = "none"
+    
+    try:
+        # Get User Inputs
+        model_name = js.document.getElementById("model_select").value
+        selection_value = js.document.getElementById("fault_type_select").value
+        input_val = float(js.document.getElementById("input_val").value)
+        input_unit = js.document.getElementById("input_unit").value
+        
+        if not selection_value:
+            raise ValueError("Please ensure a specific relationship is selected.")
+
+        fault_type, relation_key = selection_value.split("|")
+        
+        # Retrieve loaded data
+        if model_name not in loaded_models:
+            loaded_models[model_name], _ = load_model_data(model_name)
+            
+        # Drill down to the specific parameter list
+        model_root = loaded_models[model_name].get(model_name, loaded_models[model_name])
+        params = model_root['fault_types'][fault_type][relation_key]
+
+        # Determine Direction
+        # logic: relation_key usually looks like "A_from_L" or "Mw_from_A"
+        # We determine direction based on the input unit provided by user
+        
+        direction = 'forward' # Default
+        
+        # Simple heuristic for direction based on relationship name vs input unit
+        # (This logic mimics what solve_relationship expects)
+        target_y, source_x = relation_key.split('_from_')
+        
+        # If the relationship is "Mw from A", and input is "Mw", we are going Inverse (A from Mw)
+        # Note: This is a simplification. For robust logic, we check the JSON's 'units' keys.
+        first_segment = params[0] if isinstance(params, list) else params
+        x_unit_def = first_segment.get('units', {}).get('x', '')
+        
+        # If the user input unit matches the model's X unit, it's forward.
+        # Otherwise, we assume inverse.
+        if input_unit == x_unit_def:
+            direction = 'forward'
+        else:
+            direction = 'inverse'
+
+        # --- CALL YOUR SOLVER ---
+        result, res_unit_or_err = solve_relationship(params, input_val, input_unit, direction)
+        
+        # Check for warnings (extrapolation)
+        warning = check_if_extrapolating(params, input_val, input_unit, direction)
+
+        if result is None:
+            # Show Error
+            err_box = js.document.getElementById("error_area")
+            err_box.style.display = "block"
+            err_box.innerText = f"Calculation Failed: {res_unit_or_err}"
+        else:
+            # Show Result
+            res_box = js.document.getElementById("result_area")
+            res_box.style.display = "block"
+            
+            # Format numbers nicel
+            formatted_res = f"{result:.4f}"
+            js.document.getElementById("res_val").innerText = formatted_res
+            js.document.getElementById("res_unit").innerText = res_unit_or_err
+            
+            msg_el = js.document.getElementById("res_msg")
+            msg_el.innerText = warning if warning else ""
+
+    except Exception as e:
+        err_box = js.document.getElementById("error_area")
+        err_box.style.display = "block"
+        err_box.innerText = f"System Error: {str(e)}"
+
+</script>
+</body>
+</html>
