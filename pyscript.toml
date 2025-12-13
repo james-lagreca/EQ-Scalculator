@@ -2,13 +2,13 @@ name = "EQ Scalculator"
 description = "Earthquake Scaling Relationship Calculator"
 packages = ["pandas", "numpy", "scipy", "plotly"]
 
-# --- CORE LOGIC ---
+# --- FETCH CORE ---
 [[fetch]]
 from = "_core"
 to_folder = "_core"
 files = ["generic_solver.py", "helpers.py", "__init__.py"]
 
-# --- SCALING MODELS ---
+# --- FETCH MODELS (All 4 must be here) ---
 
 [[fetch]]
 from = "scaling_models/leonard_2014"

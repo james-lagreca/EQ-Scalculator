@@ -147,8 +147,7 @@
         # --- LOAD DATA LOGIC ---
         loaded_models = {}
         
-        # Mapping Folder Name -> File Name
-        # This fixes the issue where Yang's file is named 'yang_2020.json' but inside 'yang_etal_2020' folder
+        # MAPPING: "Folder Name" -> "File Name inside that folder"
         model_config = {
             "leonard_2014": "leonard_2014.json",
             "somerville_2014": "somerville_2014.json",
@@ -185,7 +184,7 @@
             
             if not found_any:
                 js.document.getElementById("err_det").style.display = "block"
-                js.document.getElementById("err_det").innerText = "Error: No model files found. Check your pyscript.toml paths."
+                js.document.getElementById("err_det").innerText = "Error: No model files found. Please check pyscript.toml paths."
             
             # Trigger initial population of fault types for the first loaded model
             update_fault_options("model_select_det", "fault_select_det")
@@ -265,7 +264,6 @@
                 for _ in range(sims):
                     iter_val = np.random.normal(mean, std)
                     # We assume Input Unit matches Mean Value Unit (e.g. Mw)
-                    # You might want to add a unit selector for MC input specifically
                     res, u = solve_one_simulation_run(params, iter_val, "Mw", "forward", True)
                     if res: results.append(res)
                 
