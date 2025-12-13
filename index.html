@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EQ Scaling Calculator</title>
     
+    <!-- Load PyScript & Plotly -->
     <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
     <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
@@ -39,12 +40,14 @@
 
     <h1>EQ Calculator</h1>
 
+    <!-- TABS NAVIGATION -->
     <div class="tab">
         <button class="tablinks active" onclick="openTab(event, 'Deterministic')">Deterministic</button>
         <button class="tablinks" onclick="openTab(event, 'MonteCarlo')">Monte Carlo</button>
         <button class="tablinks" onclick="openTab(event, 'Explore')">Explore / Plots</button>
     </div>
 
+    <!-- TAB 1: DETERMINISTIC -->
     <div id="Deterministic" class="tabcontent" style="display: block;">
         <div class="card">
             <h3>Calculate Single Value</h3>
@@ -77,6 +80,7 @@
         </div>
     </div>
 
+    <!-- TAB 2: MONTE CARLO -->
     <div id="MonteCarlo" class="tabcontent">
         <div class="card">
             <h3>Monte Carlo Simulation</h3>
@@ -108,6 +112,7 @@
         </div>
     </div>
 
+    <!-- TAB 3: EXPLORE -->
     <div id="Explore" class="tabcontent">
         <div class="card">
             <h3>Plot Scaling Curves</h3>
@@ -121,6 +126,7 @@
         </div>
     </div>
 
+    <!-- JAVASCRIPT FOR TABS -->
     <script>
         function openTab(evt, tabName) {
             var i, tabcontent, tablinks;
@@ -133,6 +139,7 @@
         }
     </script>
 
+    <!-- PYTHON LOGIC -->
     <script type="py" config="pyscript.toml">
         import json
         import js
@@ -142,12 +149,14 @@
         import plotly.express as px
         import plotly.io as pio
         from pyodide.ffi import create_proxy
+        # Note: Assuming you renamed file to logic.py as per our "Nuclear Option"
+        # If not, change 'logic' back to 'generic_solver' below
         from _core.logic import solve_relationship, solve_one_simulation_run, calculate_curve
 
         # --- LOAD DATA LOGIC ---
         loaded_models = {}
         
-        # MAPPING: "Folder Name" -> "File Name inside that folder"
+        # Mapping Folder Name -> File Name
         model_config = {
             "leonard_2014": "leonard_2014.json",
             "somerville_2014": "somerville_2014.json",
@@ -271,8 +280,9 @@
                 df = pd.DataFrame({'Result': results})
                 fig = px.histogram(df, x='Result', nbins=30, title="Monte Carlo Distribution")
                 
+                # FIX: use js.JSON.parse instead of JSON.parse
                 graphJSON = json.dumps(fig.to_dict(), cls=pio.utils.PlotlyJSONEncoder)
-                js.Plotly.newPlot("mc_plot_area", JSON.parse(graphJSON))
+                js.Plotly.newPlot("mc_plot_area", js.JSON.parse(graphJSON))
                 
             except Exception as ex:
                 js.document.getElementById("err_mc").style.display = "block"
@@ -296,8 +306,9 @@
                 df = pd.DataFrame({'Mw': x_vals, 'Result': y_vals})
                 fig = px.line(df, x='Mw', y='Result', title=f"{rel} Scaling Curve")
                 
+                # FIX: use js.JSON.parse instead of JSON.parse
                 graphJSON = json.dumps(fig.to_dict(), cls=pio.utils.PlotlyJSONEncoder)
-                js.Plotly.newPlot("curve_plot_area", JSON.parse(graphJSON))
+                js.Plotly.newPlot("curve_plot_area", js.JSON.parse(graphJSON))
             except Exception as ex:
                 js.alert(str(ex))
 
