@@ -7,212 +7,278 @@
     
     <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
     <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 
     <style>
-        body { font-family: -apple-system, sans-serif; background-color: #f0f2f6; padding: 20px; color: #31333F; }
-        .container { max-width: 700px; margin: 0 auto; background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        h1 { margin-top: 0; color: #0e1117; font-size: 1.8rem; }
+        body { font-family: -apple-system, sans-serif; background: #f0f2f6; padding: 20px; color: #31333F; max-width: 900px; margin: 0 auto; }
+        .card { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        h1 { margin-top: 0; color: #0e1117; }
+        
+        /* TABS STYLING */
+        .tab { overflow: hidden; border-bottom: 1px solid #ccc; margin-bottom: 20px; }
+        .tab button { background-color: inherit; float: left; border: none; outline: none; cursor: pointer; padding: 10px 20px; font-size: 16px; font-weight: bold; color: #555; }
+        .tab button:hover { background-color: #ddd; border-radius: 5px 5px 0 0; }
+        .tab button.active { color: #ff4b4b; border-bottom: 3px solid #ff4b4b; }
+        .tabcontent { display: none; animation: fadeEffect 0.5s; }
+        @keyframes fadeEffect { from {opacity: 0;} to {opacity: 1;} }
+
+        /* INPUTS */
         label { display: block; margin-top: 15px; font-weight: 600; font-size: 0.9rem; }
-        select, input { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #d6d6d6; border-radius: 5px; box-sizing: border-box; font-size: 1rem; }
-        button { width: 100%; background-color: #ff4b4b; color: white; border: none; padding: 12px; border-radius: 5px; margin-top: 25px; font-size: 1rem; cursor: pointer; font-weight: bold; }
-        button:hover { background-color: #ff3333; }
+        select, input { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #d6d6d6; border-radius: 5px; box-sizing: border-box; }
+        .row { display: flex; gap: 15px; }
+        .col { flex: 1; }
+
+        /* BUTTONS & RESULTS */
+        button.action-btn { width: 100%; background-color: #ff4b4b; color: white; border: none; padding: 12px; border-radius: 5px; margin-top: 25px; font-size: 1rem; cursor: pointer; font-weight: bold; }
+        button.action-btn:hover { background-color: #ff3333; }
         .result-box { margin-top: 20px; padding: 15px; background: #e8f0fe; border-radius: 5px; display: none; border-left: 5px solid #4ea8de; }
         .error-box { margin-top: 20px; padding: 15px; background: #ffe8e8; color: #b00; border-radius: 5px; display: none; border-left: 5px solid #ff4b4b; }
-        .spinner { display: none; color: #666; margin-top: 10px; font-style: italic; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>EQ Scaling Calculator</h1>
-    <p>Deterministic calculation using scaling models.</p>
+    <h1>EQ Calculator</h1>
 
-    <label for="model_select">Select Model</label>
-    <select id="model_select">
-        <option value="leonard_2014">Leonard (2014)</option>
-        <option value="somerville_2014">Somerville (2014)</option>
-        <option value="wells_coppersmith_1994">Wells & Coppersmith (1994)</option>
-    </select>
+    <div class="tab">
+        <button class="tablinks active" onclick="openTab(event, 'Deterministic')">Deterministic</button>
+        <button class="tablinks" onclick="openTab(event, 'MonteCarlo')">Monte Carlo</button>
+        <button class="tablinks" onclick="openTab(event, 'Explore')">Explore / Plots</button>
+    </div>
 
-    <label for="fault_type_select">Fault Type / Relationship</label>
-    <select id="fault_type_select">
-        <option value="" disabled selected>Select a model first...</option>
-    </select>
+    <div id="Deterministic" class="tabcontent" style="display: block;">
+        <div class="card">
+            <h3>Calculate Single Value</h3>
+            
+            <label>Select Model</label>
+            <select id="model_select_det" class="model-loader"></select>
 
-    <div style="display: flex; gap: 10px;">
-        <div style="flex: 2;">
-            <label for="input_val">Input Value</label>
-            <input type="number" id="input_val" step="0.1" value="6.5">
-        </div>
-        <div style="flex: 1;">
-            <label for="input_unit">Input Unit</label>
-            <select id="input_unit">
-                <option value="Mw">Mw</option>
-                <option value="km">km</option>
-                <option value="m">m</option>
-                <option value="km^2">km²</option>
-            </select>
+            <label>Relationship (Fault Type)</label>
+            <select id="fault_select_det"></select>
+
+            <div class="row">
+                <div class="col">
+                    <label>Input Value</label>
+                    <input type="number" id="input_val_det" value="6.5" step="0.1">
+                </div>
+                <div class="col">
+                    <label>Input Unit</label>
+                    <select id="input_unit_det">
+                        <option value="Mw">Mw</option>
+                        <option value="km">km</option>
+                        <option value="m">m</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="action-btn" py-click="calculate_deterministic">Calculate</button>
+            
+            <div id="res_det" class="result-box"></div>
+            <div id="err_det" class="error-box"></div>
         </div>
     </div>
 
-    <button id="calc_btn" py-click="run_calculation">Calculate</button>
-    <div id="spinner" class="spinner">Calculating...</div>
+    <div id="MonteCarlo" class="tabcontent">
+        <div class="card">
+            <h3>Monte Carlo Simulation</h3>
+            <p>Run multiple simulations to account for uncertainty.</p>
 
-    <div id="result_area" class="result-box">
-        <h3 style="margin-top:0;">Result</h3>
-        <p style="font-size: 1.2rem;">
-            <strong id="res_val">--</strong> <span id="res_unit">--</span>
-        </p>
-        <p id="res_msg" style="font-size: 0.9rem; color: #666;"></p>
+            <label>Select Model</label>
+            <select id="model_select_mc" class="model-loader"></select>
+            <label>Relationship</label>
+            <select id="fault_select_mc"></select>
+
+            <div class="row">
+                <div class="col">
+                    <label>Mean Value</label>
+                    <input type="number" id="input_val_mc" value="6.5">
+                </div>
+                <div class="col">
+                    <label>Std Dev / Error</label>
+                    <input type="number" id="input_unc_mc" value="0.1">
+                </div>
+            </div>
+            
+            <label>Number of Simulations</label>
+            <input type="number" id="sim_count" value="1000">
+
+            <button class="action-btn" py-click="run_monte_carlo">Run Simulation</button>
+            
+            <div id="mc_plot_area" style="margin-top: 20px;"></div>
+            <div id="err_mc" class="error-box"></div>
+        </div>
     </div>
-    
-    <div id="error_area" class="error-box"></div>
-</div>
 
-<script type="py" config="pyscript.toml">
-import json
-import js
-import os
-from pyodide.ffi import create_proxy
-from _core.generic_solver import solve_relationship, check_if_extrapolating
+    <div id="Explore" class="tabcontent">
+        <div class="card">
+            <h3>Plot Scaling Curves</h3>
+            <label>Select Model</label>
+            <select id="model_select_plot" class="model-loader"></select>
+            <label>Relationship</label>
+            <select id="fault_select_plot"></select>
+            
+            <button class="action-btn" py-click="plot_curve">Generate Curve</button>
+            <div id="curve_plot_area" style="margin-top: 20px;"></div>
+        </div>
+    </div>
 
-# --- 1. GLOBAL STATE TO STORE LOADED MODELS ---
-loaded_models = {}
+    <script>
+        function openTab(evt, tabName) {
+            var i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tabcontent");
+            for (i = 0; i < tabcontent.length; i++) { tabcontent[i].style.display = "none"; }
+            tablinks = document.getElementsByClassName("tablinks");
+            for (i = 0; i < tablinks.length; i++) { tablinks[i].className = tablinks[i].className.replace(" active", ""); }
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+    </script>
 
-# --- 2. FUNCTION TO LOAD DATA ---
-def load_model_data(model_name):
-    """Loads JSON data for the selected model from the virtual file system."""
-    try:
-        # Construct path based on TOML structure
-        file_path = f"scaling_models/{model_name}/{model_name}.json"
-        
-        if not os.path.exists(file_path):
-            return None, f"File not found: {file_path}"
+    <script type="py" config="pyscript.toml">
+        import json
+        import js
+        import os
+        import numpy as np
+        import pandas as pd
+        import plotly.express as px
+        import plotly.io as pio
+        from pyodide.ffi import create_proxy
+        from _core.generic_solver import solve_relationship, solve_one_simulation_run, calculate_curve
 
-        with open(file_path, 'r') as f:
-            data = json.load(f)
-        return data, None
-    except Exception as e:
-        return None, str(e)
+        # --- LOAD DATA LOGIC ---
+        loaded_models = {}
+        available_model_files = ["leonard_2014", "somerville_2014"] # Add more names here manually if needed
 
-# --- 3. UPDATE DROPDOWN OPTIONS ---
-def on_model_change(event):
-    """When Model changes, populate the Fault Type dropdown."""
-    model_name = js.document.getElementById("model_select").value
-    fault_select = js.document.getElementById("fault_type_select")
-    
-    # Clear existing options
-    fault_select.innerHTML = ""
-    
-    # Load data
-    data, error = load_model_data(model_name)
-    if error:
-        opt = js.document.createElement("option")
-        opt.text = "Error loading model"
-        fault_select.add(opt)
-        return
+        def load_data():
+            # Populate all model dropdowns
+            dropdowns = ["model_select_det", "model_select_mc", "model_select_plot"]
+            
+            for m_name in available_model_files:
+                path = f"scaling_models/{m_name}/{m_name}.json"
+                if os.path.exists(path):
+                    with open(path, 'r') as f:
+                        data = json.load(f)
+                    loaded_models[m_name] = data
+                    
+                    # Add options to all dropdowns
+                    for d_id in dropdowns:
+                        select = js.document.getElementById(d_id)
+                        opt = js.document.createElement("option")
+                        opt.text = m_name
+                        opt.value = m_name
+                        select.add(opt)
+            
+            # Trigger initial population of fault types
+            update_fault_options("model_select_det", "fault_select_det")
+            update_fault_options("model_select_mc", "fault_select_mc")
+            update_fault_options("model_select_plot", "fault_select_plot")
 
-    loaded_models[model_name] = data
-    
-    # Iterate through the JSON structure to find relationships
-    # Structure is usually: Model -> Fault Types -> Relationships
-    model_root = data.get(model_name, data) # Handle if root key matches filename
-    
-    if 'fault_types' in model_root:
-        for fault_type, relations in model_root['fault_types'].items():
-            for relation_name in relations.keys():
-                # Create a readable name like "SCR: Area from Mw"
-                readable_name = f"{fault_type}: {relation_name}"
+        def update_fault_options(model_dd_id, fault_dd_id):
+            model_name = js.document.getElementById(model_dd_id).value
+            fault_select = js.document.getElementById(fault_dd_id)
+            fault_select.innerHTML = ""
+            
+            if model_name in loaded_models:
+                data = loaded_models[model_name]
+                root = data.get(model_name, data)
                 
-                # Create Option Element
-                opt = js.document.createElement("option")
-                opt.text = readable_name
-                # Value stores the path to data: "fault_type|relation_name"
-                opt.value = f"{fault_type}|{relation_name}" 
-                fault_select.add(opt)
+                if 'fault_types' in root:
+                    for f_type, rels in root['fault_types'].items():
+                        for rel_name in rels.keys():
+                            opt = js.document.createElement("option")
+                            opt.text = f"{f_type}: {rel_name}"
+                            opt.value = f"{f_type}|{rel_name}"
+                            fault_select.add(opt)
 
-# Bind the change event manually to Python function
-js.document.getElementById("model_select").addEventListener("change", create_proxy(on_model_change))
+        # Event Listeners for Dropdowns
+        def on_det_change(e): update_fault_options("model_select_det", "fault_select_det")
+        def on_mc_change(e): update_fault_options("model_select_mc", "fault_select_mc")
+        def on_plot_change(e): update_fault_options("model_select_plot", "fault_select_plot")
 
-# Trigger once on load to populate initial list
-on_model_change(None)
+        js.document.getElementById("model_select_det").addEventListener("change", create_proxy(on_det_change))
+        js.document.getElementById("model_select_mc").addEventListener("change", create_proxy(on_mc_change))
+        js.document.getElementById("model_select_plot").addEventListener("change", create_proxy(on_plot_change))
 
-# --- 4. CALCULATION LOGIC ---
-def run_calculation(event):
-    js.document.getElementById("result_area").style.display = "none"
-    js.document.getElementById("error_area").style.display = "none"
-    
-    try:
-        # Get User Inputs
-        model_name = js.document.getElementById("model_select").value
-        selection_value = js.document.getElementById("fault_type_select").value
-        input_val = float(js.document.getElementById("input_val").value)
-        input_unit = js.document.getElementById("input_unit").value
-        
-        if not selection_value:
-            raise ValueError("Please ensure a specific relationship is selected.")
+        # --- DETERMINISTIC SOLVER ---
+        def calculate_deterministic(e):
+            try:
+                model = js.document.getElementById("model_select_det").value
+                sel = js.document.getElementById("fault_select_det").value
+                val = float(js.document.getElementById("input_val_det").value)
+                unit = js.document.getElementById("input_unit_det").value
+                
+                f_type, rel = sel.split("|")
+                params = loaded_models[model].get(model, loaded_models[model])['fault_types'][f_type][rel]
+                
+                # Determine direction (Simplified logic)
+                direction = 'forward' if unit in ['Mw', 'km', 'm'] else 'inverse' 
+                # (You might need smarter unit logic here based on your JSON structure)
 
-        fault_type, relation_key = selection_value.split("|")
-        
-        # Retrieve loaded data
-        if model_name not in loaded_models:
-            loaded_models[model_name], _ = load_model_data(model_name)
-            
-        # Drill down to the specific parameter list
-        model_root = loaded_models[model_name].get(model_name, loaded_models[model_name])
-        params = model_root['fault_types'][fault_type][relation_key]
+                res, res_unit = solve_relationship(params, val, unit, direction)
+                
+                out_div = js.document.getElementById("res_det")
+                out_div.style.display = "block"
+                out_div.innerText = f"Result: {res:.4f} {res_unit}"
+                js.document.getElementById("err_det").style.display = "none"
+            except Exception as ex:
+                js.document.getElementById("err_det").style.display = "block"
+                js.document.getElementById("err_det").innerText = str(ex)
 
-        # Determine Direction
-        # logic: relation_key usually looks like "A_from_L" or "Mw_from_A"
-        # We determine direction based on the input unit provided by user
-        
-        direction = 'forward' # Default
-        
-        # Simple heuristic for direction based on relationship name vs input unit
-        # (This logic mimics what solve_relationship expects)
-        target_y, source_x = relation_key.split('_from_')
-        
-        # If the relationship is "Mw from A", and input is "Mw", we are going Inverse (A from Mw)
-        # Note: This is a simplification. For robust logic, we check the JSON's 'units' keys.
-        first_segment = params[0] if isinstance(params, list) else params
-        x_unit_def = first_segment.get('units', {}).get('x', '')
-        
-        # If the user input unit matches the model's X unit, it's forward.
-        # Otherwise, we assume inverse.
-        if input_unit == x_unit_def:
-            direction = 'forward'
-        else:
-            direction = 'inverse'
+        # --- MONTE CARLO SOLVER ---
+        def run_monte_carlo(e):
+            try:
+                model = js.document.getElementById("model_select_mc").value
+                sel = js.document.getElementById("fault_select_mc").value
+                mean = float(js.document.getElementById("input_val_mc").value)
+                std = float(js.document.getElementById("input_unc_mc").value)
+                sims = int(js.document.getElementById("sim_count").value)
+                
+                f_type, rel = sel.split("|")
+                params = loaded_models[model].get(model, loaded_models[model])['fault_types'][f_type][rel]
+                
+                results = []
+                # Simple loop for simulation
+                for _ in range(sims):
+                    # Randomize input
+                    iter_val = np.random.normal(mean, std)
+                    # Run logic (assuming input is Mw for now)
+                    res, u = solve_one_simulation_run(params, iter_val, "Mw", "forward", True)
+                    if res: results.append(res)
+                
+                # Plot Histogram
+                df = pd.DataFrame({'Result': results})
+                fig = px.histogram(df, x='Result', nbins=30, title="Monte Carlo Distribution")
+                
+                # Render to div
+                graphJSON = json.dumps(fig.to_dict(), cls=pio.utils.PlotlyJSONEncoder)
+                js.Plotly.newPlot("mc_plot_area", JSON.parse(graphJSON))
+                
+            except Exception as ex:
+                js.document.getElementById("err_mc").style.display = "block"
+                js.document.getElementById("err_mc").innerText = str(ex)
 
-        # --- CALL YOUR SOLVER ---
-        result, res_unit_or_err = solve_relationship(params, input_val, input_unit, direction)
-        
-        # Check for warnings (extrapolation)
-        warning = check_if_extrapolating(params, input_val, input_unit, direction)
+        # --- PLOTTING SOLVER ---
+        def plot_curve(e):
+            try:
+                model = js.document.getElementById("model_select_plot").value
+                sel = js.document.getElementById("fault_select_plot").value
+                f_type, rel = sel.split("|")
+                params = loaded_models[model].get(model, loaded_models[model])['fault_types'][f_type][rel]
+                
+                # Generate X range (e.g. Mw 4.0 to 9.0)
+                x_vals = np.linspace(4.0, 9.0, 50)
+                y_vals, y_unit = calculate_curve(params, x_vals, "Mw", "forward")
+                
+                df = pd.DataFrame({'Mw': x_vals, 'Result': y_vals})
+                fig = px.line(df, x='Mw', y='Result', title=f"{rel} Scaling Curve")
+                
+                graphJSON = json.dumps(fig.to_dict(), cls=pio.utils.PlotlyJSONEncoder)
+                js.Plotly.newPlot("curve_plot_area", JSON.parse(graphJSON))
+            except Exception as ex:
+                js.alert(str(ex))
 
-        if result is None:
-            # Show Error
-            err_box = js.document.getElementById("error_area")
-            err_box.style.display = "block"
-            err_box.innerText = f"Calculation Failed: {res_unit_or_err}"
-        else:
-            # Show Result
-            res_box = js.document.getElementById("result_area")
-            res_box.style.display = "block"
-            
-            # Format numbers nicel
-            formatted_res = f"{result:.4f}"
-            js.document.getElementById("res_val").innerText = formatted_res
-            js.document.getElementById("res_unit").innerText = res_unit_or_err
-            
-            msg_el = js.document.getElementById("res_msg")
-            msg_el.innerText = warning if warning else ""
+        # Initial Load
+        load_data()
 
-    except Exception as e:
-        err_box = js.document.getElementById("error_area")
-        err_box.style.display = "block"
-        err_box.innerText = f"System Error: {str(e)}"
-
-</script>
+    </script>
 </body>
 </html>
