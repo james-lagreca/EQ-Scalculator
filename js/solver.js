@@ -10,46 +10,58 @@
  * @param {string} direction - 'forward' or 'inverse'
  * @returns {number|null} Calculated result
  */
-function _calcEquation(form, x, a, b, direction) {
+function calculateDeterministic(form, x, a, b, direction) {
     try {
         if (x === null || x === undefined || isNaN(x)) {
+            console.warn('Invalid input to calculateDeterministic:', x);
             return null;
         }
-
+        
         x = parseFloat(x);
         a = parseFloat(a);
         b = parseFloat(b);
+        
+        console.log('calculateDeterministic:', { form, x, a, b, direction });
         
         if (form === "log10(Y) = a + b * log10(X)") {
             if (direction === 'forward') {
                 if (x <= 0) return null;
                 const result = Math.pow(10, a + b * Math.log10(x));
-                    return result;
+                console.log('Forward log-log result:', result);
+                return result;
             } else { // inverse
                 if (x <= 0) return null;
                 const result = Math.pow(10, (Math.log10(x) - a) / b);
+                console.log('Inverse log-log result:', result);
                 return result;
             }
         } else if (form === "Y = a + b * log10(X)") {
             if (direction === 'forward') {
                 if (x <= 0) return null;
                 const result = a + b * Math.log10(x);
+                console.log('Forward linear-log result:', result);
                 return result;
             } else { // inverse
                 const result = Math.pow(10, (x - a) / b);
+                console.log('Inverse linear-log result:', result);
                 return result;
             }
         } else if (form === "log10(Y) = a + b * X") {
             if (direction === 'forward') {
                 const result = Math.pow(10, a + b * x);
+                console.log('Forward log-linear result:', result);
                 return result;
             } else { // inverse
                 if (x <= 0) return null;
                 const result = (Math.log10(x) - a) / b;
+                console.log('Inverse log-linear result:', result);
                 return result;
             }
+        } else {
+            console.error('Unknown equation form:', form);
         }
     } catch (e) {
+        console.error('Error in calculateDeterministic:', e);
         return null;
     }
     return null;
@@ -83,10 +95,10 @@ function getTargetSegment(modelParams, convertedInput, direction) {
             const maxX = rangeX[1];
             
             const yAtMinX = minX !== null ? 
-                _calcEquation(segment.equation_form, minX, 
+                calculateDeterministic(segment.equation_form, minX, 
                     segment.coefficients.a, segment.coefficients.b, 'forward') : null;
             const yAtMaxX = maxX !== null ? 
-                _calcEquation(segment.equation_form, maxX, 
+                calculateDeterministic(segment.equation_form, maxX, 
                     segment.coefficients.a, segment.coefficients.b, 'forward') : null;
             
             let minY, maxY;
@@ -144,14 +156,14 @@ function solveRelationship(modelParams, inputVal, inputUnit, direction = 'forwar
             return { result: null, unit: null, error: "Could not identify a model segment." };
         }
         
-        const result = _calcEquation(
+        const result = calculateDeterministic(
             targetSegment.equation_form,
             convertedInput,
             targetSegment.coefficients.a,
             targetSegment.coefficients.b,
             direction
         );
-
+        
         if (result === null) {
             return { result: null, unit: null, error: "Mathematical error during calculation." };
         }
@@ -197,10 +209,10 @@ function checkIfExtrapolating(modelParams, inputVal, inputUnit, direction = 'for
                 const maxX = rangeX[1];
                 
                 const yAtMinX = minX !== null ? 
-                    _calcEquation(segment.equation_form, minX, 
+                    calculateDeterministic(segment.equation_form, minX, 
                         segment.coefficients.a, segment.coefficients.b, 'forward') : null;
                 const yAtMaxX = maxX !== null ? 
-                    _calcEquation(segment.equation_form, maxX, 
+                    calculateDeterministic(segment.equation_form, maxX, 
                         segment.coefficients.a, segment.coefficients.b, 'forward') : null;
                 
                 let minY, maxY;
@@ -257,41 +269,24 @@ function solveOneSimulationRun(modelParams, inputVal, inputUnit, direction = 'fo
         let a = targetSegment.coefficients.a;
         let b = targetSegment.coefficients.b;
         
-        // Apply model uncertainty if requested (mirrors Python solve_one_simulation_run)
-        if (includeModelUncertainty) {
-            // Apply std_dev_a noise to intercept coefficient (e.g. Leonard 2014)
-            if (targetSegment.std_dev_a !== null && targetSegment.std_dev_a !== undefined) {
+        // Apply model uncertainty if requested
+        if (includeModelUncertainty && targetSegment.std_dev_a) {
+            try {
                 const stdDevA = parseFloat(targetSegment.std_dev_a);
-                if (!isNaN(stdDevA)) {
-                    a = randomNormal(a, stdDevA);
-                }
-            }
-
-            // Apply log10_y_std_dev scatter directly to result (e.g. Wells & Coppersmith 1994)
-            if (targetSegment.log10_y_std_dev !== null &&
-                targetSegment.log10_y_std_dev !== undefined &&
-                direction === 'forward') {
-                const stdDev = targetSegment.log10_y_std_dev;
-                const deterministicResult = _calcEquation(
-                    targetSegment.equation_form, convertedInput, a, b, direction
-                );
-                if (deterministicResult !== null && deterministicResult > 0) {
-                    const log10Y = Math.log10(deterministicResult);
-                    return { result: Math.pow(10, randomNormal(log10Y, stdDev)), unit: targetSegment.units[yKey] };
-                } else {
-                    return { result: null, unit: null };
-                }
+                a = randomNormal(a, stdDevA);
+            } catch (e) {
+                // If std_dev_a is a range string, skip uncertainty
             }
         }
-
-        const result = _calcEquation(
+        
+        const result = calculateDeterministic(
             targetSegment.equation_form,
             convertedInput,
             a,
             b,
             direction
         );
-
+        
         return { result: result, unit: targetSegment.units[yKey] };
     } catch (e) {
         return { result: null, unit: null };
