@@ -1,0 +1,152 @@
+{
+  "Stirling et al. 2024": {
+    "citation": "Stirling, M., Fitzgerald, M., Shaw, B., and Ross, C. (2024). New Magnitude-Area Scaling Relations for the New Zealand National Seismic Hazard Model 2022. Bulletin of the Seismological Society of America, 114(1), 137-149. doi: 10.1785/0120230114",
+    "description": "Mw-area scaling relations developed for the New Zealand National Seismic Hazard Model 2022 (NZ NSHM 2022). Two sets of relations are provided: the NZ NSHM 2022 final set (adjusted for historical NZ observations and USGS practice) and an alternative set reflecting the quantitative scoring of published relations more directly. All equations are of the form Mw = log10(A) + C.",
+    "fault_types": {
+      "Crustal (NZ NSHM 2022 - Lower)": {
+        "Mw_from_A": [
+          {
+            "source": "Equation 10",
+            "equation_form": "Y = a + b * log10(X)",
+            "coefficients": { "a": 4.1, "b": 1.0 },
+            "log10_y_std_dev": 0.25,
+            "units": { "y": null, "x": "km^2" },
+            "range_x": [null, null]
+          }
+        ]
+      },
+      "Crustal (NZ NSHM 2022 - Preferred)": {
+        "Mw_from_A": [
+          {
+            "source": "Equation 11",
+            "equation_form": "Y = a + b * log10(X)",
+            "coefficients": { "a": 4.2, "b": 1.0 },
+            "log10_y_std_dev": 0.25,
+            "units": { "y": null, "x": "km^2" },
+            "range_x": [null, null]
+          }
+        ]
+      },
+      "Crustal (NZ NSHM 2022 - Upper)": {
+        "Mw_from_A": [
+          {
+            "source": "Equation 12",
+            "equation_form": "Y = a + b * log10(X)",
+            "coefficients": { "a": 4.3, "b": 1.0 },
+            "log10_y_std_dev": 0.25,
+            "units": { "y": null, "x": "km^2" },
+            "range_x": [null, null]
+          }
+        ]
+      },
+      "Subduction Interface (NZ NSHM 2022 - Lower)": {
+        "Mw_from_A": [
+          {
+            "source": "Equation 13",
+            "equation_form": "Y = a + b * log10(X)",
+            "coefficients": { "a": 3.9, "b": 1.0 },
+            "log10_y_std_dev": 0.25,
+            "units": { "y": null, "x": "km^2" },
+            "range_x": [null, null]
+          }
+        ]
+      },
+      "Subduction Interface (NZ NSHM 2022 - Preferred)": {
+        "Mw_from_A": [
+          {
+            "source": "Equation 14",
+            "equation_form": "Y = a + b * log10(X)",
+            "coefficients": { "a": 4.0, "b": 1.0 },
+            "log10_y_std_dev": 0.25,
+            "units": { "y": null, "x": "km^2" },
+            "range_x": [null, null]
+          }
+        ]
+      },
+      "Subduction Interface (NZ NSHM 2022 - Upper)": {
+        "Mw_from_A": [
+          {
+            "source": "Equation 15",
+            "equation_form": "Y = a + b * log10(X)",
+            "coefficients": { "a": 4.1, "b": 1.0 },
+            "log10_y_std_dev": 0.25,
+            "units": { "y": null, "x": "km^2" },
+            "range_x": [null, null]
+          }
+        ]
+      },
+      "Crustal - Alternative (Lower)": {
+        "Mw_from_A": [
+          {
+            "source": "Equation 16",
+            "equation_form": "Y = a + b * log10(X)",
+            "coefficients": { "a": 3.9, "b": 1.0 },
+            "log10_y_std_dev": 0.25,
+            "units": { "y": null, "x": "km^2" },
+            "range_x": [null, null]
+          }
+        ]
+      },
+      "Crustal - Alternative (Preferred)": {
+        "Mw_from_A": [
+          {
+            "source": "Equation 17",
+            "equation_form": "Y = a + b * log10(X)",
+            "coefficients": { "a": 4.1, "b": 1.0 },
+            "log10_y_std_dev": 0.25,
+            "units": { "y": null, "x": "km^2" },
+            "range_x": [null, null]
+          }
+        ]
+      },
+      "Crustal - Alternative (Upper)": {
+        "Mw_from_A": [
+          {
+            "source": "Equation 18",
+            "equation_form": "Y = a + b * log10(X)",
+            "coefficients": { "a": 4.3, "b": 1.0 },
+            "log10_y_std_dev": 0.25,
+            "units": { "y": null, "x": "km^2" },
+            "range_x": [null, null]
+          }
+        ]
+      },
+      "Subduction Interface - Alternative (Lower)": {
+        "Mw_from_A": [
+          {
+            "source": "Equation 19",
+            "equation_form": "Y = a + b * log10(X)",
+            "coefficients": { "a": 3.6, "b": 1.0 },
+            "log10_y_std_dev": 0.25,
+            "units": { "y": null, "x": "km^2" },
+            "range_x": [null, null]
+          }
+        ]
+      },
+      "Subduction Interface - Alternative (Preferred)": {
+        "Mw_from_A": [
+          {
+            "source": "Equation 20",
+            "equation_form": "Y = a + b * log10(X)",
+            "coefficients": { "a": 3.9, "b": 1.0 },
+            "log10_y_std_dev": 0.25,
+            "units": { "y": null, "x": "km^2" },
+            "range_x": [null, null]
+          }
+        ]
+      },
+      "Subduction Interface - Alternative (Upper)": {
+        "Mw_from_A": [
+          {
+            "source": "Equation 21",
+            "equation_form": "Y = a + b * log10(X)",
+            "coefficients": { "a": 4.1, "b": 1.0 },
+            "log10_y_std_dev": 0.25,
+            "units": { "y": null, "x": "km^2" },
+            "range_x": [null, null]
+          }
+        ]
+      }
+    }
+  }
+}
