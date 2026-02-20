@@ -30,7 +30,8 @@ async function loadAllModels() {
             'scaling_models/wells_coppersmith_1994/wells_coppersmith_1994.json',
             'scaling_models/somerville_2014/somerville_2014.json',
             'scaling_models/yang_etal_2020/yang_2020.json',
-            'scaling_models/stirling_etal_2024/stirling_etal_2024.json'
+            'scaling_models/stirling_etal_2024/stirling_etal_2024.json',
+            'scaling_models/thingbaijam_etal_2017/thingbaijam_etal_2017.json'
         ];
         
         // Load all models

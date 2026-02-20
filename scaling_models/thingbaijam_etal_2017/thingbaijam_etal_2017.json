@@ -1,0 +1,296 @@
+{
+  "Thingbaijam et al. 2017": {
+    "citation": "Thingbaijam, K. K. S., Mai, P. M., and Goda, K. (2017). New Empirical Earthquake Source-Scaling Laws. Bulletin of the Seismological Society of America, 107(5), 2225-2246. doi: 10.1785/0120170017",
+    "description": "Empirical earthquake source-scaling laws derived using General Orthogonal Regression (GOR) on 250 rupture models from 130 earthquakes (SRCMOD database). Provides scaling relations for rupture length (L), width (W), area (A), and average slip (D) as functions of moment magnitude (Mw) and rupture dimensions. Four faulting regimes: shallow crustal reverse, normal, strike-slip, and subduction interface. All dimension equations are of the form log10(Y) = a + b * Mw.",
+    "fault_types": {
+      "Reverse": {
+        "L_from_Mw": [
+          {
+            "source": "Table 1",
+            "equation_form": "log10(Y) = a + b * X",
+            "coefficients": { "a": -2.693, "b": 0.614 },
+            "log10_y_std_dev": 0.083,
+            "units": { "y": "km", "x": null },
+            "range_x": [5.59, 7.69]
+          }
+        ],
+        "W_from_Mw": [
+          {
+            "source": "Table 1",
+            "equation_form": "log10(Y) = a + b * X",
+            "coefficients": { "a": -1.669, "b": 0.435 },
+            "log10_y_std_dev": 0.087,
+            "units": { "y": "km", "x": null },
+            "range_x": [5.59, 7.69]
+          }
+        ],
+        "A_from_Mw": [
+          {
+            "source": "Table 1",
+            "equation_form": "log10(Y) = a + b * X",
+            "coefficients": { "a": -4.362, "b": 1.049 },
+            "log10_y_std_dev": 0.121,
+            "units": { "y": "km^2", "x": null },
+            "range_x": [5.59, 7.69]
+          }
+        ],
+        "AD_from_Mw": [
+          {
+            "source": "Table 2",
+            "equation_form": "log10(Y) = a + b * X",
+            "coefficients": { "a": -3.156, "b": 0.451 },
+            "log10_y_std_dev": 0.149,
+            "units": { "y": "m", "x": null },
+            "range_x": [5.59, 7.69]
+          }
+        ],
+        "AD_from_A": [
+          {
+            "source": "Table 2",
+            "equation_form": "log10(Y) = a + b * log10(X)",
+            "coefficients": { "a": -1.213, "b": 0.429 },
+            "log10_y_std_dev": 0.180,
+            "units": { "y": "m", "x": "km^2" },
+            "range_x": [23.5, 4860.0]
+          }
+        ],
+        "AD_from_L": [
+          {
+            "source": "Table 2",
+            "equation_form": "log10(Y) = a + b * log10(X)",
+            "coefficients": { "a": -1.456, "b": 0.975 },
+            "log10_y_std_dev": 0.132,
+            "units": { "y": "m", "x": "km" },
+            "range_x": [4.9, 108.0]
+          }
+        ],
+        "AD_from_W": [
+          {
+            "source": "Table 2",
+            "equation_form": "log10(Y) = a + b * log10(X)",
+            "coefficients": { "a": -1.022, "b": 0.767 },
+            "log10_y_std_dev": 0.200,
+            "units": { "y": "m", "x": "km" },
+            "range_x": [4.8, 45.0]
+          }
+        ]
+      },
+      "Normal": {
+        "L_from_Mw": [
+          {
+            "source": "Table 1",
+            "equation_form": "log10(Y) = a + b * X",
+            "coefficients": { "a": -1.722, "b": 0.485 },
+            "log10_y_std_dev": 0.128,
+            "units": { "y": "km", "x": null },
+            "range_x": [5.86, 8.39]
+          }
+        ],
+        "W_from_Mw": [
+          {
+            "source": "Table 1",
+            "equation_form": "log10(Y) = a + b * X",
+            "coefficients": { "a": -0.829, "b": 0.323 },
+            "log10_y_std_dev": 0.128,
+            "units": { "y": "km", "x": null },
+            "range_x": [5.86, 8.39]
+          }
+        ],
+        "A_from_Mw": [
+          {
+            "source": "Table 1",
+            "equation_form": "log10(Y) = a + b * X",
+            "coefficients": { "a": -2.551, "b": 0.808 },
+            "log10_y_std_dev": 0.181,
+            "units": { "y": "km^2", "x": null },
+            "range_x": [5.86, 8.39]
+          }
+        ],
+        "AD_from_Mw": [
+          {
+            "source": "Table 2",
+            "equation_form": "log10(Y) = a + b * X",
+            "coefficients": { "a": -4.967, "b": 0.693 },
+            "log10_y_std_dev": 0.195,
+            "units": { "y": "m", "x": null },
+            "range_x": [5.86, 8.39]
+          }
+        ],
+        "AD_from_A": [
+          {
+            "source": "Table 2",
+            "equation_form": "log10(Y) = a + b * log10(X)",
+            "coefficients": { "a": -2.779, "b": 0.858 },
+            "log10_y_std_dev": 0.330,
+            "units": { "y": "m", "x": "km^2" },
+            "range_x": [54.0, 29531.3]
+          }
+        ],
+        "AD_from_L": [
+          {
+            "source": "Table 2",
+            "equation_form": "log10(Y) = a + b * log10(X)",
+            "coefficients": { "a": -2.302, "b": 1.302 },
+            "log10_y_std_dev": 0.252,
+            "units": { "y": "m", "x": "km" },
+            "range_x": [9.0, 262.5]
+          }
+        ],
+        "AD_from_W": [
+          {
+            "source": "Table 2",
+            "equation_form": "log10(Y) = a + b * log10(X)",
+            "coefficients": { "a": -3.698, "b": 2.512 },
+            "log10_y_std_dev": 0.223,
+            "units": { "y": "m", "x": "km" },
+            "range_x": [6.0, 112.5]
+          }
+        ]
+      },
+      "Strike-Slip": {
+        "L_from_Mw": [
+          {
+            "source": "Table 1",
+            "equation_form": "log10(Y) = a + b * X",
+            "coefficients": { "a": -2.943, "b": 0.681 },
+            "log10_y_std_dev": 0.151,
+            "units": { "y": "km", "x": null },
+            "range_x": [5.38, 8.70]
+          }
+        ],
+        "W_from_Mw": [
+          {
+            "source": "Table 1",
+            "equation_form": "log10(Y) = a + b * X",
+            "coefficients": { "a": -0.543, "b": 0.261 },
+            "log10_y_std_dev": 0.105,
+            "units": { "y": "km", "x": null },
+            "range_x": [5.38, 8.70]
+          }
+        ],
+        "A_from_Mw": [
+          {
+            "source": "Table 1",
+            "equation_form": "log10(Y) = a + b * X",
+            "coefficients": { "a": -3.486, "b": 0.942 },
+            "log10_y_std_dev": 0.184,
+            "units": { "y": "km^2", "x": null },
+            "range_x": [5.38, 8.70]
+          }
+        ],
+        "AD_from_Mw": [
+          {
+            "source": "Table 2",
+            "equation_form": "log10(Y) = a + b * X",
+            "coefficients": { "a": -4.032, "b": 0.558 },
+            "log10_y_std_dev": 0.227,
+            "units": { "y": "m", "x": null },
+            "range_x": [5.38, 8.70]
+          }
+        ],
+        "AD_from_A": [
+          {
+            "source": "Table 2",
+            "equation_form": "log10(Y) = a + b * log10(X)",
+            "coefficients": { "a": -1.875, "b": 0.593 },
+            "log10_y_std_dev": 0.302,
+            "units": { "y": "m", "x": "km^2" },
+            "range_x": [39.0, 29000.0]
+          }
+        ],
+        "AD_from_L": [
+          {
+            "source": "Table 2",
+            "equation_form": "log10(Y) = a + b * log10(X)",
+            "coefficients": { "a": -1.473, "b": 0.789 },
+            "log10_y_std_dev": 0.276,
+            "units": { "y": "m", "x": "km" },
+            "range_x": [6.0, 580.0]
+          }
+        ],
+        "AD_from_W": [
+          {
+            "source": "Table 2",
+            "equation_form": "log10(Y) = a + b * log10(X)",
+            "coefficients": { "a": -3.092, "b": 2.391 },
+            "log10_y_std_dev": 0.178,
+            "units": { "y": "m", "x": "km" },
+            "range_x": [6.5, 50.0]
+          }
+        ]
+      },
+      "Subduction Interface": {
+        "L_from_Mw": [
+          {
+            "source": "Table 1",
+            "equation_form": "log10(Y) = a + b * X",
+            "coefficients": { "a": -2.412, "b": 0.583 },
+            "log10_y_std_dev": 0.107,
+            "units": { "y": "km", "x": null },
+            "range_x": [6.68, 9.19]
+          }
+        ],
+        "W_from_Mw": [
+          {
+            "source": "Table 1",
+            "equation_form": "log10(Y) = a + b * X",
+            "coefficients": { "a": -0.880, "b": 0.366 },
+            "log10_y_std_dev": 0.099,
+            "units": { "y": "km", "x": null },
+            "range_x": [6.68, 9.19]
+          }
+        ],
+        "A_from_Mw": [
+          {
+            "source": "Table 1",
+            "equation_form": "log10(Y) = a + b * X",
+            "coefficients": { "a": -3.292, "b": 0.949 },
+            "log10_y_std_dev": 0.150,
+            "units": { "y": "km^2", "x": null },
+            "range_x": [6.68, 9.19]
+          }
+        ],
+        "AD_from_Mw": [
+          {
+            "source": "Table 2",
+            "equation_form": "log10(Y) = a + b * X",
+            "coefficients": { "a": -4.226, "b": 0.552 },
+            "log10_y_std_dev": 0.171,
+            "units": { "y": "m", "x": null },
+            "range_x": [6.68, 9.19]
+          }
+        ],
+        "AD_from_A": [
+          {
+            "source": "Table 2",
+            "equation_form": "log10(Y) = a + b * log10(X)",
+            "coefficients": { "a": -2.375, "b": 0.582 },
+            "log10_y_std_dev": 0.257,
+            "units": { "y": "m", "x": "km^2" },
+            "range_x": [852.6, 318080.0]
+          }
+        ],
+        "AD_from_L": [
+          {
+            "source": "Table 2",
+            "equation_form": "log10(Y) = a + b * log10(X)",
+            "coefficients": { "a": -2.320, "b": 1.092 },
+            "log10_y_std_dev": 0.213,
+            "units": { "y": "m", "x": "km" },
+            "range_x": [29.2, 1420.0]
+          }
+        ],
+        "AD_from_W": [
+          {
+            "source": "Table 2",
+            "equation_form": "log10(Y) = a + b * log10(X)",
+            "coefficients": { "a": -2.438, "b": 1.244 },
+            "log10_y_std_dev": 0.213,
+            "units": { "y": "m", "x": "km" },
+            "range_x": [29.2, 260.0]
+          }
+        ]
+      }
+    }
+  }
+}
