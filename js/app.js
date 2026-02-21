@@ -75,26 +75,77 @@ function initializeUI() {
     document.getElementById('plotXParam').value = defaultInput;
     document.getElementById('plotYParam').value = defaultOutput;
     
+    // Populate comparison tab dropdowns
+    populateSelect('cmpInputParam', params);
+    populateSelect('cmpOutputParam', params);
+    document.getElementById('cmpInputParam').value = defaultInput;
+    document.getElementById('cmpOutputParam').value = defaultOutput;
+
+    // Populate chain calculator start dropdown
+    populateSelect('chainStartParam', params);
+    document.getElementById('chainStartParam').value = defaultInput;
+
     // Initialize configurations
     updateDeterministicConfig();
     updateMonteCarloConfig();
-    
+    updateComparisonConfig();
+    updateChainStartUnit();
+
     console.log('UI initialized successfully');
 }
 
 function populateSelect(elementId, options, selectedValue = null) {
     const select = document.getElementById(elementId);
     select.innerHTML = '';
-    
+
     options.forEach(option => {
         const opt = document.createElement('option');
         opt.value = option;
         opt.textContent = option;
         select.appendChild(opt);
     });
-    
+
     if (selectedValue) {
         select.value = selectedValue;
+    }
+}
+
+/**
+ * Populate a <select> with <optgroup> elements grouped by paper name.
+ * Each option's value is the full modelId string; the visible text is the fault type only.
+ * @param {string} elementId
+ * @param {Object} groupedModels - { groupLabel: { modelId: modelInfo, ... }, ... }
+ */
+function populateSelectGrouped(elementId, groupedModels) {
+    const select = document.getElementById(elementId);
+    select.innerHTML = '';
+
+    let totalOptions = 0;
+    for (const groupLabel in groupedModels) {
+        const group = groupedModels[groupLabel];
+        const modelIds = Object.keys(group);
+        if (modelIds.length === 0) continue;
+
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = groupLabel;
+
+        for (const modelId of modelIds) {
+            const opt = document.createElement('option');
+            opt.value = modelId;
+            // Show only the fault type portion as the visible text
+            const dashIdx = modelId.indexOf(' - ');
+            opt.textContent = dashIdx !== -1 ? modelId.substring(dashIdx + 3) : modelId;
+            optgroup.appendChild(opt);
+            totalOptions++;
+        }
+        select.appendChild(optgroup);
+    }
+
+    if (totalOptions === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'No models available';
+        select.appendChild(opt);
     }
 }
 
@@ -127,24 +178,15 @@ function toggleCalcMode() {
 function updateDeterministicConfig() {
     const inputParam = document.getElementById('inputParam').value;
     const outputParam = document.getElementById('outputParam').value;
-    
-    // Update available models
-    const models = findAvailableModels(inputParam, outputParam);
-    const modelSelect = document.getElementById('selectedModel');
-    
-    populateSelect('selectedModel', Object.keys(models));
-    
-    if (Object.keys(models).length === 0) {
-        const opt = document.createElement('option');
-        opt.value = '';
-        opt.textContent = 'No models available';
-        modelSelect.appendChild(opt);
-    }
-    
+
+    // Use grouped optgroup dropdown for model selection
+    const groupedModels = findAvailableModelsGrouped(inputParam, outputParam);
+    populateSelectGrouped('selectedModel', groupedModels);
+
     // Update units
     const inputUnits = getUnitsForParam(inputParam);
     const outputUnits = getUnitsForParam(outputParam);
-    
+
     populateSelect('inputUnit', inputUnits, inputUnits[0]);
     populateSelect('outputUnit', outputUnits, outputUnits[0]);
 }
@@ -168,52 +210,67 @@ function updateMonteCarloConfig() {
 function updateMCModelList() {
     const inputParam = document.getElementById('mcInputParam').value;
     const outputParam = document.getElementById('mcOutputParam').value;
-    const models = findAvailableModels(inputParam, outputParam);
-    
+    const groupedModels = findAvailableModelsGrouped(inputParam, outputParam);
+
     const container = document.getElementById('mcModelList');
     container.innerHTML = '';
-    
     selectedModelsWeights = {};
-    
-    const modelKeys = Object.keys(models);
-    const defaultWeight = modelKeys.length > 0 ? Math.floor(100 / modelKeys.length) : 0;
-    
-    modelKeys.forEach((modelId, index) => {
-        const item = document.createElement('div');
-        item.className = 'model-weight-item';
-        
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.id = `model_${index}`;
-        checkbox.checked = true;
-        checkbox.onchange = updateTotalWeight;
-        
-        const label = document.createElement('label');
-        label.htmlFor = `model_${index}`;
-        label.textContent = modelId;
-        
-        const weightInput = document.createElement('input');
-        weightInput.type = 'number';
-        weightInput.min = 0;
-        weightInput.max = 100;
-        weightInput.value = defaultWeight;
-        weightInput.dataset.modelId = modelId;
-        weightInput.oninput = updateTotalWeight;
-        
-        const weightLabel = document.createElement('span');
-        weightLabel.textContent = '%';
-        weightLabel.style.marginLeft = '5px';
-        
-        item.appendChild(checkbox);
-        item.appendChild(label);
-        item.appendChild(weightInput);
-        item.appendChild(weightLabel);
-        
-        container.appendChild(item);
-        
-        selectedModelsWeights[modelId] = defaultWeight;
-    });
-    
+
+    // Flatten to count total models for default weight calculation
+    const allModelIds = Object.values(groupedModels).flatMap(g => Object.keys(g));
+    const defaultWeight = allModelIds.length > 0 ? Math.floor(100 / allModelIds.length) : 0;
+
+    let index = 0;
+    for (const groupLabel in groupedModels) {
+        const group = groupedModels[groupLabel];
+        const modelIds = Object.keys(group);
+        if (modelIds.length === 0) continue;
+
+        // Paper group header
+        const header = document.createElement('div');
+        header.className = 'mc-model-group-header';
+        header.textContent = groupLabel;
+        container.appendChild(header);
+
+        for (const modelId of modelIds) {
+            const item = document.createElement('div');
+            item.className = 'model-weight-item';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = `model_${index}`;
+            checkbox.checked = true;
+            checkbox.onchange = updateTotalWeight;
+
+            const label = document.createElement('label');
+            label.htmlFor = `model_${index}`;
+            // Show only fault type portion
+            const dashIdx = modelId.indexOf(' - ');
+            label.textContent = dashIdx !== -1 ? modelId.substring(dashIdx + 3) : modelId;
+
+            const weightInput = document.createElement('input');
+            weightInput.type = 'number';
+            weightInput.min = 0;
+            weightInput.max = 100;
+            weightInput.value = defaultWeight;
+            weightInput.dataset.modelId = modelId;
+            weightInput.oninput = updateTotalWeight;
+
+            const weightLabel = document.createElement('span');
+            weightLabel.textContent = '%';
+            weightLabel.style.marginLeft = '5px';
+
+            item.appendChild(checkbox);
+            item.appendChild(label);
+            item.appendChild(weightInput);
+            item.appendChild(weightLabel);
+            container.appendChild(item);
+
+            selectedModelsWeights[modelId] = defaultWeight;
+            index++;
+        }
+    }
+
     updateTotalWeight();
 }
 
@@ -833,6 +890,619 @@ function updatePlot() {
     }
 }
 
+// ─────────────────────────────────────────────
+// FEATURE 2: MODEL COMPARISON
+// ─────────────────────────────────────────────
+
+function updateComparisonConfig() {
+    const inputParam = document.getElementById('cmpInputParam').value;
+    const outputParam = document.getElementById('cmpOutputParam').value;
+
+    const inputUnits = getUnitsForParam(inputParam);
+    const outputUnits = getUnitsForParam(outputParam);
+    populateSelect('cmpInputUnit', inputUnits, inputUnits[0]);
+    populateSelect('cmpOutputUnit', outputUnits, outputUnits[0]);
+
+    updateComparisonModelList();
+}
+
+function updateComparisonModelList() {
+    const inputParam = document.getElementById('cmpInputParam').value;
+    const outputParam = document.getElementById('cmpOutputParam').value;
+    const groupedModels = findAvailableModelsGrouped(inputParam, outputParam);
+
+    const container = document.getElementById('cmpModelList');
+    container.innerHTML = '';
+
+    let hasModels = false;
+    for (const groupLabel in groupedModels) {
+        const group = groupedModels[groupLabel];
+        const modelIds = Object.keys(group);
+        if (modelIds.length === 0) continue;
+        hasModels = true;
+
+        const header = document.createElement('div');
+        header.className = 'cmp-model-group-header';
+        header.textContent = groupLabel;
+        container.appendChild(header);
+
+        for (const modelId of modelIds) {
+            const item = document.createElement('div');
+            item.className = 'cmp-model-item';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.dataset.modelId = modelId;
+            checkbox.checked = true;
+            checkbox.className = 'cmp-model-checkbox';
+
+            const label = document.createElement('label');
+            const dashIdx = modelId.indexOf(' - ');
+            label.textContent = dashIdx !== -1 ? modelId.substring(dashIdx + 3) : modelId;
+
+            item.appendChild(checkbox);
+            item.appendChild(label);
+            container.appendChild(item);
+        }
+    }
+
+    if (!hasModels) {
+        container.innerHTML = '<div class="warning">No models available for this parameter combination.</div>';
+    }
+}
+
+function selectAllComparisonModels(checked) {
+    document.querySelectorAll('.cmp-model-checkbox').forEach(cb => { cb.checked = checked; });
+}
+
+function runComparison() {
+    const inputParam = document.getElementById('cmpInputParam').value;
+    const outputParam = document.getElementById('cmpOutputParam').value;
+    const inputValue = parseFloat(document.getElementById('cmpInputValue').value);
+    const inputUnit = document.getElementById('cmpInputUnit').value;
+    const outputUnit = document.getElementById('cmpOutputUnit').value;
+
+    if (isNaN(inputValue)) {
+        showError('cmpResults', 'Please enter a valid numeric input value.');
+        return;
+    }
+
+    const checkedBoxes = document.querySelectorAll('.cmp-model-checkbox:checked');
+    if (checkedBoxes.length === 0) {
+        showError('cmpResults', 'Please select at least one model.');
+        return;
+    }
+
+    document.getElementById('cmpResults').innerHTML = '<div class="spinner"></div>';
+
+    setTimeout(() => {
+        try {
+            const allModelsFlat = findAvailableModels(inputParam, outputParam);
+            const rows = [];
+
+            checkedBoxes.forEach(cb => {
+                const modelId = cb.dataset.modelId;
+                const modelInfo = allModelsFlat[modelId];
+                if (!modelInfo) return;
+
+                let result = null, resultUnit = null, sigma = null, warning = null;
+
+                if (modelInfo.paper === 'virtual') {
+                    if (inputParam === 'M0') {
+                        result = m0ToMw(inputValue, inputUnit);
+                        resultUnit = null;
+                    } else {
+                        result = mwToM0(inputValue, 'Nm');
+                        resultUnit = 'Nm';
+                    }
+                } else {
+                    const params = getRelationshipParams(modelInfo.paper, modelInfo.fault, modelInfo.key);
+                    if (!params) return;
+
+                    const solved = solveRelationship(params, inputValue, inputUnit, modelInfo.direction);
+                    if (solved.error || solved.result === null) return;
+
+                    result = solved.result;
+                    resultUnit = solved.unit;
+
+                    // Extract sigma from the matched segment
+                    const xKey = modelInfo.direction === 'forward' ? 'x' : 'y';
+                    const modelInputUnit = params[0].units[xKey];
+                    const convertedInput = modelInputUnit
+                        ? convertUnits(inputValue, inputUnit, modelInputUnit)
+                        : inputValue;
+                    const segment = getTargetSegment(params, convertedInput, modelInfo.direction);
+                    sigma = segment ? (segment.log10_y_std_dev || null) : null;
+
+                    warning = checkIfExtrapolating(params, inputValue, inputUnit, modelInfo.direction);
+                }
+
+                // Convert result to target output unit
+                let finalResult = result;
+                let finalUnit = resultUnit;
+                if (outputUnit !== 'N/A' && resultUnit) {
+                    try {
+                        finalResult = convertUnits(result, resultUnit, outputUnit);
+                        finalUnit = outputUnit;
+                    } catch (e) { /* keep original */ }
+                }
+                if (outputParam === 'Mw' && resultUnit) {
+                    finalResult = m0ToMw(result, resultUnit);
+                    finalUnit = null;
+                }
+
+                // Sigma bounds: computed in model-native units, then converted
+                let sigmaLower = null, sigmaUpper = null;
+                if (sigma !== null && result !== null && result > 0) {
+                    const log10Result = Math.log10(result);
+                    const rawLower = Math.pow(10, log10Result - sigma);
+                    const rawUpper = Math.pow(10, log10Result + sigma);
+                    try {
+                        sigmaLower = (outputUnit !== 'N/A' && resultUnit)
+                            ? convertUnits(rawLower, resultUnit, outputUnit) : rawLower;
+                        sigmaUpper = (outputUnit !== 'N/A' && resultUnit)
+                            ? convertUnits(rawUpper, resultUnit, outputUnit) : rawUpper;
+                    } catch (e) {
+                        sigmaLower = rawLower;
+                        sigmaUpper = rawUpper;
+                    }
+                }
+
+                // Valid range display
+                let validRange = 'Not specified';
+                if (modelInfo.paper !== 'virtual') {
+                    const params2 = getRelationshipParams(modelInfo.paper, modelInfo.fault, modelInfo.key);
+                    if (params2) {
+                        const xKey2 = modelInfo.direction === 'forward' ? 'x' : 'y';
+                        const unit2 = params2[0].units[xKey2];
+                        const ranges = params2.map(seg => {
+                            const r = seg.range_x || [null, null];
+                            const lo = r[0] !== null ? r[0] : '–';
+                            const hi = r[1] !== null ? r[1] : '–';
+                            return `${lo} – ${hi}`;
+                        });
+                        validRange = ranges.join(', ') + (unit2 ? ` ${unit2}` : '');
+                    }
+                }
+
+                const dashIdx = modelId.indexOf(' - ');
+                const paperDisplay = dashIdx !== -1 ? modelId.substring(0, dashIdx) : modelId;
+                const faultDisplay = dashIdx !== -1 ? modelId.substring(dashIdx + 3) : '';
+
+                rows.push({
+                    model: paperDisplay,
+                    faultType: faultDisplay,
+                    modelId,
+                    result: finalResult,
+                    unit: finalUnit,
+                    sigmaLower,
+                    sigmaUpper,
+                    validRange,
+                    inRange: !warning,
+                    warning
+                });
+            });
+
+            if (rows.length === 0) {
+                showError('cmpResults', 'No results could be calculated for the selected models.');
+                return;
+            }
+
+            displayComparisonResults(rows, inputParam, outputParam, inputValue, inputUnit, outputUnit);
+        } catch (err) {
+            console.error('Comparison error:', err);
+            showError('cmpResults', `Comparison failed: ${err.message}`);
+        }
+    }, 50);
+}
+
+function displayComparisonResults(rows, inputParam, outputParam, inputValue, inputUnit, outputUnit) {
+    const unitDisplay = outputUnit && outputUnit !== 'N/A' ? ` (${outputUnit})` : '';
+    const inputUnitDisplay = inputUnit && inputUnit !== 'N/A' ? ` ${inputUnit}` : '';
+
+    let tableHtml = `
+        <div class="table-scroll-wrapper">
+        <table class="stat-table cmp-table" id="cmpResultTable">
+            <thead>
+                <tr>
+                    <th>Model</th>
+                    <th>Fault Type</th>
+                    <th>Result${unitDisplay}</th>
+                    <th>−1σ${unitDisplay}</th>
+                    <th>+1σ${unitDisplay}</th>
+                    <th>Valid Input Range</th>
+                    <th>In Range?</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    rows.forEach(row => {
+        const resultStr = row.result !== null ? row.result.toFixed(4) : 'N/A';
+        const lowerStr = row.sigmaLower !== null ? row.sigmaLower.toFixed(4) : 'N/A';
+        const upperStr = row.sigmaUpper !== null ? row.sigmaUpper.toFixed(4) : 'N/A';
+        const inRangeStr = row.inRange ? '✓' : '⚠ Extrapolation';
+        const inRangeClass = row.inRange ? 'cmp-in-range' : 'cmp-out-of-range';
+        tableHtml += `
+            <tr>
+                <td>${row.model}</td>
+                <td>${row.faultType}</td>
+                <td><strong>${resultStr}</strong></td>
+                <td>${lowerStr}</td>
+                <td>${upperStr}</td>
+                <td class="cmp-range">${row.validRange}</td>
+                <td class="${inRangeClass}">${inRangeStr}</td>
+            </tr>
+        `;
+    });
+
+    tableHtml += '</tbody></table></div>';
+
+    const html = `
+        <div class="result-box">
+            <h3>Comparison: ${inputParam} = ${inputValue}${inputUnitDisplay} → ${outputParam}</h3>
+            <div class="cmp-toolbar">
+                <button class="btn-secondary" onclick="copyComparisonCSV()">📋 Copy as CSV</button>
+            </div>
+            ${tableHtml}
+            <div id="cmpChart" class="cmp-chart"></div>
+        </div>
+    `;
+
+    document.getElementById('cmpResults').innerHTML = html;
+
+    // Build Plotly bar chart with error bars
+    const validRows = rows.filter(r => r.result !== null);
+    const errorBarsLower = validRows.map(r =>
+        r.sigmaLower !== null ? Math.abs(r.result - r.sigmaLower) : 0);
+    const errorBarsUpper = validRows.map(r =>
+        r.sigmaUpper !== null ? Math.abs(r.sigmaUpper - r.result) : 0);
+
+    const trace = {
+        type: 'bar',
+        x: validRows.map(r => `${r.model}<br><i>${r.faultType}</i>`),
+        y: validRows.map(r => r.result),
+        error_y: {
+            type: 'data',
+            symmetric: false,
+            array: errorBarsUpper,
+            arrayminus: errorBarsLower,
+            visible: true,
+            color: '#475569',
+            thickness: 2,
+            width: 6
+        },
+        marker: {
+            color: validRows.map(r => r.inRange
+                ? 'rgba(102,126,234,0.8)' : 'rgba(251,191,36,0.8)'),
+            line: {
+                color: validRows.map(r => r.inRange ? '#667eea' : '#f59e0b'),
+                width: 2
+            }
+        },
+        hovertemplate: '<b>%{x}</b><br>Result: %{y:.4f}<extra></extra>'
+    };
+
+    const layout = {
+        title: `${outputParam} for ${inputParam} = ${inputValue}${inputUnitDisplay}`,
+        xaxis: { title: 'Model', tickangle: -25 },
+        yaxis: { title: `${outputParam}${unitDisplay}` },
+        bargap: 0.3,
+        margin: { b: 140, t: 60, l: 70, r: 30 },
+        paper_bgcolor: 'white',
+        plot_bgcolor: '#f8fafc'
+    };
+
+    Plotly.newPlot('cmpChart', [trace], layout, { responsive: true });
+}
+
+function copyComparisonCSV() {
+    const table = document.getElementById('cmpResultTable');
+    if (!table) return;
+
+    const rows = [];
+    for (const row of table.rows) {
+        const cells = [];
+        for (const cell of row.cells) {
+            cells.push('"' + cell.innerText.replace(/"/g, '""').trim() + '"');
+        }
+        rows.push(cells.join(','));
+    }
+    const csvText = rows.join('\n');
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(csvText).then(() => {
+            const btn = document.querySelector('.cmp-toolbar .btn-secondary');
+            if (btn) {
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => { btn.textContent = '📋 Copy as CSV'; }, 2000);
+            }
+        });
+    } else {
+        const ta = document.createElement('textarea');
+        ta.value = csvText;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+    }
+}
+
+// ─────────────────────────────────────────────
+// FEATURE 3: CHAIN CALCULATIONS
+// ─────────────────────────────────────────────
+
+let chainSteps = [];
+const MAX_CHAIN_STEPS = 5;
+
+function updateChainStartUnit() {
+    const param = document.getElementById('chainStartParam').value;
+    const units = getUnitsForParam(param);
+    populateSelect('chainStartUnit', units, units[0]);
+}
+
+function resetChain() {
+    chainSteps = [];
+    document.getElementById('chainSteps').innerHTML = '';
+    document.getElementById('chainResults').innerHTML = '';
+    document.getElementById('chainAddBtn').disabled = false;
+    updateChainStartUnit();
+}
+
+/**
+ * Return all output parameters reachable from the given input parameter.
+ */
+function getOutputParamsFor(inputParam) {
+    const outputs = new Set();
+    const allParams = getAllParameters();
+    for (const p of allParams) {
+        if (p === inputParam) continue;
+        const models = findAvailableModels(inputParam, p);
+        if (Object.keys(models).length > 0) outputs.add(p);
+    }
+    return Array.from(outputs).sort();
+}
+
+function addChainStep() {
+    if (chainSteps.length >= MAX_CHAIN_STEPS) {
+        document.getElementById('chainAddBtn').disabled = true;
+        return;
+    }
+
+    const stepIndex = chainSteps.length;
+    const currentInputParam = stepIndex === 0
+        ? document.getElementById('chainStartParam').value
+        : chainSteps[stepIndex - 1].outputParam;
+
+    const availableOutputs = getOutputParamsFor(currentInputParam);
+
+    if (availableOutputs.length === 0) {
+        document.getElementById('chainSteps').insertAdjacentHTML('beforeend',
+            `<div class="warning">No further calculations available from <strong>${currentInputParam}</strong>.</div>`);
+        document.getElementById('chainAddBtn').disabled = true;
+        return;
+    }
+
+    const step = { outputParam: availableOutputs[0], selectedModelId: null };
+    chainSteps.push(step);
+
+    const stepsDiv = document.getElementById('chainSteps');
+    const stepDiv = document.createElement('div');
+    stepDiv.className = 'chain-step';
+    stepDiv.id = `chainStep_${stepIndex}`;
+
+    stepDiv.innerHTML = `
+        <div class="chain-step-header">
+            <span class="chain-step-number">Step ${stepIndex + 1}</span>
+            <span class="chain-step-arrow">→</span>
+            <button class="btn-remove-step" onclick="removeChainStep(${stepIndex})" title="Remove this step">✕</button>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Input (from previous)</label>
+                <div class="chain-input-display">${currentInputParam}</div>
+            </div>
+            <div class="form-group">
+                <label for="chainStepOutput_${stepIndex}">Output Parameter</label>
+                <select id="chainStepOutput_${stepIndex}" onchange="onChainStepOutputChange(${stepIndex})">
+                    ${availableOutputs.map(p => `<option value="${p}">${p}</option>`).join('')}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="chainStepModel_${stepIndex}">Model</label>
+                <select id="chainStepModel_${stepIndex}"></select>
+            </div>
+        </div>
+    `;
+
+    stepsDiv.appendChild(stepDiv);
+    updateChainStepModels(stepIndex);
+
+    if (chainSteps.length >= MAX_CHAIN_STEPS) {
+        document.getElementById('chainAddBtn').disabled = true;
+    }
+}
+
+function updateChainStepModels(stepIndex) {
+    const currentInputParam = stepIndex === 0
+        ? document.getElementById('chainStartParam').value
+        : chainSteps[stepIndex - 1].outputParam;
+    const outputParam = chainSteps[stepIndex].outputParam;
+
+    const groupedModels = findAvailableModelsGrouped(currentInputParam, outputParam);
+    populateSelectGrouped(`chainStepModel_${stepIndex}`, groupedModels);
+
+    const modelSelect = document.getElementById(`chainStepModel_${stepIndex}`);
+    chainSteps[stepIndex].selectedModelId = modelSelect.value || null;
+    modelSelect.onchange = () => {
+        chainSteps[stepIndex].selectedModelId = modelSelect.value;
+    };
+}
+
+function onChainStepOutputChange(stepIndex) {
+    const select = document.getElementById(`chainStepOutput_${stepIndex}`);
+    chainSteps[stepIndex].outputParam = select.value;
+    chainSteps[stepIndex].selectedModelId = null;
+    updateChainStepModels(stepIndex);
+    truncateChainStepsAfter(stepIndex);
+}
+
+function truncateChainStepsAfter(stepIndex) {
+    for (let i = chainSteps.length - 1; i > stepIndex; i--) {
+        const el = document.getElementById(`chainStep_${i}`);
+        if (el) el.remove();
+        chainSteps.splice(i, 1);
+    }
+    document.getElementById('chainAddBtn').disabled = chainSteps.length >= MAX_CHAIN_STEPS;
+}
+
+function removeChainStep(stepIndex) {
+    for (let i = chainSteps.length - 1; i >= stepIndex; i--) {
+        const el = document.getElementById(`chainStep_${i}`);
+        if (el) el.remove();
+        chainSteps.splice(i, 1);
+    }
+    document.getElementById('chainAddBtn').disabled = chainSteps.length >= MAX_CHAIN_STEPS;
+}
+
+function runChain() {
+    const startParam = document.getElementById('chainStartParam').value;
+    const startValue = parseFloat(document.getElementById('chainStartValue').value);
+    const startUnit = document.getElementById('chainStartUnit').value;
+
+    if (isNaN(startValue)) {
+        showError('chainResults', 'Please enter a valid starting value.');
+        return;
+    }
+    if (chainSteps.length === 0) {
+        showError('chainResults', 'Please add at least one step to the chain.');
+        return;
+    }
+
+    const chainNodes = [{
+        param: startParam,
+        value: startValue,
+        unit: startUnit,
+        modelId: null,
+        warning: null
+    }];
+
+    let currentParam = startParam;
+    let currentValue = startValue;
+    let currentUnit = startUnit;
+
+    for (let i = 0; i < chainSteps.length; i++) {
+        const step = chainSteps[i];
+        const outputParam = step.outputParam;
+        const modelId = step.selectedModelId;
+
+        if (!modelId) {
+            showError('chainResults', `Step ${i + 1}: No model selected.`);
+            return;
+        }
+
+        const modelsFlat = findAvailableModels(currentParam, outputParam);
+        const modelInfo = modelsFlat[modelId];
+        if (!modelInfo) {
+            showError('chainResults', `Step ${i + 1}: Model not found.`);
+            return;
+        }
+
+        let result = null, resultUnit = null, warning = null;
+
+        if (modelInfo.paper === 'virtual') {
+            if (currentParam === 'M0') {
+                result = m0ToMw(currentValue, currentUnit);
+                resultUnit = null;
+            } else {
+                result = mwToM0(currentValue, 'Nm');
+                resultUnit = 'Nm';
+            }
+        } else {
+            const params = getRelationshipParams(modelInfo.paper, modelInfo.fault, modelInfo.key);
+            if (!params) {
+                showError('chainResults', `Step ${i + 1}: Could not load model parameters.`);
+                return;
+            }
+            const solved = solveRelationship(params, currentValue, currentUnit, modelInfo.direction);
+            if (solved.error || solved.result === null) {
+                showError('chainResults', `Step ${i + 1}: Calculation failed. ${solved.error || ''}`);
+                return;
+            }
+            result = solved.result;
+            resultUnit = solved.unit;
+            warning = checkIfExtrapolating(params, currentValue, currentUnit, modelInfo.direction);
+        }
+
+        chainNodes.push({
+            param: outputParam,
+            value: result,
+            unit: resultUnit,
+            modelId,
+            warning
+        });
+
+        currentParam = outputParam;
+        currentValue = result;
+        currentUnit = resultUnit;
+    }
+
+    displayChainResults(chainNodes);
+}
+
+function displayChainResults(chainNodes) {
+    let html = '<div class="result-box"><h3>Chain Result</h3><div class="chain-visual">';
+
+    for (let i = 0; i < chainNodes.length; i++) {
+        const node = chainNodes[i];
+        const valueStr = node.value !== null ? node.value.toFixed(4) : 'Error';
+        const unitStr = node.unit && node.unit !== 'N/A' ? ` ${node.unit}` : '';
+
+        html += `
+            <div class="chain-node ${node.warning ? 'chain-node-warning' : ''}">
+                <div class="chain-node-param">${node.param}</div>
+                <div class="chain-node-value">${valueStr}${unitStr}</div>
+                ${node.warning ? '<div class="chain-node-warn-icon" title="Extrapolation warning">⚠</div>' : ''}
+            </div>
+        `;
+
+        if (i < chainNodes.length - 1) {
+            const nextNode = chainNodes[i + 1];
+            // Show just the fault type portion of the model label
+            let modelLabel = '';
+            if (nextNode.modelId) {
+                const dashIdx = nextNode.modelId.indexOf(' - ');
+                modelLabel = dashIdx !== -1
+                    ? nextNode.modelId.substring(dashIdx + 3)
+                    : nextNode.modelId;
+            }
+            html += `
+                <div class="chain-arrow-group">
+                    <div class="chain-model-label">${modelLabel}</div>
+                    <div class="chain-arrow">→</div>
+                </div>
+            `;
+        }
+    }
+
+    html += '</div>'; // end chain-visual
+
+    // Extrapolation warnings summary
+    const warnings = chainNodes.filter(n => n.warning);
+    if (warnings.length > 0) {
+        html += '<div class="warning" style="margin-top:15px;"><strong>⚠ Extrapolation Warnings:</strong><ul style="margin-top:8px; padding-left:20px;">';
+        warnings.forEach(n => {
+            const stepIdx = chainNodes.indexOf(n);
+            html += `<li>Step ${stepIdx}: ${n.param} — ${n.warning}</li>`;
+        });
+        html += '</ul></div>';
+    }
+
+    html += '</div>'; // end result-box
+    document.getElementById('chainResults').innerHTML = html;
+}
+
+// ─────────────────────────────────────────────
 // Utility functions
 function showError(elementId, message) {
     document.getElementById(elementId).innerHTML = `<div class="error">${message}</div>`;

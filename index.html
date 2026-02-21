@@ -20,6 +20,8 @@
             <div class="tab active" onclick="switchTab(0)">📊 Deterministic Calculation</div>
             <div class="tab" onclick="switchTab(1)">🎲 Monte Carlo Simulation</div>
             <div class="tab" onclick="switchTab(2)">📈 Explore Relationships</div>
+            <div class="tab" onclick="switchTab(3)">📋 Model Comparison</div>
+            <div class="tab" onclick="switchTab(4)">⛓️ Chain Calculations</div>
         </div>
 
         <!-- Tab 1: Deterministic Calculation -->
@@ -232,6 +234,87 @@
                 <div id="plotDiv"></div>
             </div>
         </div>
+        <!-- Tab 4: Model Comparison -->
+        <div class="tab-content" id="tab4">
+            <div class="section">
+                <h2>1. Comparison Configuration</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="cmpInputParam">Input Parameter</label>
+                        <select id="cmpInputParam" onchange="updateComparisonConfig()"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cmpOutputParam">Output Parameter</label>
+                        <select id="cmpOutputParam" onchange="updateComparisonConfig()"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cmpInputValue">Input Value</label>
+                        <input type="number" id="cmpInputValue" value="7.0" step="0.0001">
+                    </div>
+                    <div class="form-group">
+                        <label for="cmpInputUnit">Input Unit</label>
+                        <select id="cmpInputUnit"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cmpOutputUnit">Output Unit</label>
+                        <select id="cmpOutputUnit"></select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>2. Select Models</h2>
+                <div class="cmp-model-controls">
+                    <button class="btn-secondary" onclick="selectAllComparisonModels(true)">Select All</button>
+                    <button class="btn-secondary" onclick="selectAllComparisonModels(false)">Deselect All</button>
+                </div>
+                <div id="cmpModelList"></div>
+            </div>
+
+            <button onclick="runComparison()" class="btn-primary">Compare Models</button>
+            <div id="cmpResults"></div>
+        </div>
+
+        <!-- Tab 5: Chain Calculations -->
+        <div class="tab-content" id="tab5">
+            <div class="section">
+                <h2>Chain Calculator</h2>
+                <p class="section-description">
+                    Build multi-step calculations where the output of each step becomes the input for the next.
+                    Example: Mw → A → Average Slip.
+                </p>
+
+                <div class="section" style="background: white; border: 2px solid #667eea;">
+                    <h3>Starting Value</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="chainStartParam">Parameter</label>
+                            <select id="chainStartParam" onchange="resetChain()"></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="chainStartValue">Value</label>
+                            <input type="number" id="chainStartValue" value="7.0" step="0.0001">
+                        </div>
+                        <div class="form-group">
+                            <label for="chainStartUnit">Unit</label>
+                            <select id="chainStartUnit"></select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="chainSteps"></div>
+
+                <div class="chain-add-controls">
+                    <button class="btn-secondary" onclick="addChainStep()" id="chainAddBtn">+ Add Step</button>
+                    <button class="btn-secondary" onclick="resetChain()">↺ Reset Chain</button>
+                </div>
+
+                <button class="btn-primary" onclick="runChain()">Run Chain</button>
+            </div>
+
+            <div id="chainResults"></div>
+        </div>
+
     </div>
 
     <footer style="text-align: center; padding: 30px; color: white; background: rgba(0,0,0,0.2); margin-top: 40px;">

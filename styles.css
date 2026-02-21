@@ -418,6 +418,289 @@ button:disabled, .btn-primary:disabled {
     box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
 }
 
+/* ── Feature 1: Optgroup & grouped MC model list ── */
+optgroup {
+    font-weight: 700;
+    font-style: normal;
+}
+
+.mc-model-group-header {
+    font-weight: 700;
+    color: #475569;
+    font-size: 0.82em;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 10px 15px 4px;
+    margin-top: 8px;
+    border-top: 1px solid #e1e8ed;
+}
+
+.mc-model-group-header:first-child {
+    border-top: none;
+    margin-top: 0;
+}
+
+/* ── Feature 2: Model Comparison ── */
+.btn-secondary {
+    background: white;
+    color: #667eea;
+    border: 2px solid #667eea;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.9em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: auto;
+    margin: 0;
+    box-shadow: none;
+}
+
+.btn-secondary:hover {
+    background: #667eea;
+    color: white;
+    transform: none;
+    box-shadow: none;
+}
+
+.cmp-model-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.cmp-model-group-header {
+    font-weight: 700;
+    color: #475569;
+    font-size: 0.82em;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 10px 5px 4px;
+    margin-top: 10px;
+    border-top: 1px solid #e1e8ed;
+}
+
+.cmp-model-group-header:first-child {
+    margin-top: 0;
+    border-top: none;
+}
+
+.cmp-model-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 5px;
+}
+
+.cmp-model-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin: 0;
+}
+
+.cmp-model-item label {
+    margin: 0;
+    cursor: pointer;
+    font-weight: 400;
+    color: #1e293b;
+}
+
+.cmp-toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.table-scroll-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.cmp-table th,
+.cmp-table td {
+    font-size: 0.88em;
+    white-space: nowrap;
+}
+
+.cmp-range {
+    font-family: monospace;
+    font-size: 0.82em;
+    max-width: 180px;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.cmp-in-range {
+    color: #059669;
+    font-weight: 700;
+}
+
+.cmp-out-of-range {
+    color: #d97706;
+    font-weight: 700;
+}
+
+.cmp-chart {
+    width: 100%;
+    height: 420px;
+    margin-top: 25px;
+}
+
+/* ── Feature 3: Chain Calculations ── */
+.section-description {
+    color: #64748b;
+    margin-bottom: 20px;
+    font-size: 0.95em;
+    line-height: 1.5;
+}
+
+.chain-step {
+    background: white;
+    border: 2px solid #e1e8ed;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 15px;
+}
+
+.chain-step-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.chain-step-number {
+    font-weight: 700;
+    color: #667eea;
+    font-size: 1.05em;
+}
+
+.chain-step-arrow {
+    font-size: 1.4em;
+    color: #94a3b8;
+    flex: 1;
+}
+
+.btn-remove-step {
+    background: #fee2e2;
+    color: #ef4444;
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 0.85em;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+    transition: background 0.2s;
+    flex-shrink: 0;
+}
+
+.btn-remove-step:hover {
+    background: #fca5a5;
+    transform: none;
+    box-shadow: none;
+}
+
+.chain-input-display {
+    padding: 12px;
+    border: 2px solid #e1e8ed;
+    border-radius: 8px;
+    background: #f1f5f9;
+    color: #64748b;
+    font-weight: 600;
+    font-size: 1em;
+}
+
+.chain-add-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+/* Chain visual result display */
+.chain-visual {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0;
+    padding: 20px 0;
+    overflow-x: auto;
+}
+
+.chain-node {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px;
+    padding: 15px 20px;
+    text-align: center;
+    min-width: 120px;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.chain-node-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.chain-node-param {
+    font-size: 0.78em;
+    opacity: 0.85;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 5px;
+}
+
+.chain-node-value {
+    font-size: 1.25em;
+    font-weight: 700;
+}
+
+.chain-node-warn-icon {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: white;
+    color: #d97706;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8em;
+    border: 2px solid #f59e0b;
+}
+
+.chain-arrow-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 8px;
+    flex-shrink: 0;
+    max-width: 140px;
+}
+
+.chain-model-label {
+    font-size: 0.68em;
+    color: #64748b;
+    text-align: center;
+    word-break: break-word;
+    margin-bottom: 2px;
+    line-height: 1.2;
+}
+
+.chain-arrow {
+    font-size: 1.8em;
+    color: #94a3b8;
+}
+
 @media (max-width: 768px) {
     body {
         padding: 10px;

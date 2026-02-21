@@ -71,6 +71,60 @@ async function loadAllModels() {
 }
 
 /**
+ * Find all available models grouped by paper name for optgroup rendering.
+ * Returns the same model info as findAvailableModels but nested by paper.
+ * @param {string} inputVar - Input parameter
+ * @param {string} outputVar - Output parameter
+ * @returns {Object} { paperName: { modelId: {paper, fault, key, direction}, ... }, ... }
+ */
+function findAvailableModelsGrouped(inputVar, outputVar) {
+    const grouped = {};
+
+    // Handle Hanks & Kanamori virtual model
+    if ((inputVar === 'M0' && outputVar === 'Mw') ||
+        (inputVar === 'Mw' && outputVar === 'M0')) {
+        grouped['Conversions'] = {
+            'Hanks & Kanamori (1979) Definition': {
+                paper: 'virtual', fault: 'virtual',
+                key: 'virtual', direction: 'virtual'
+            }
+        };
+    }
+
+    for (const paperName in allModels) {
+        const paper = allModels[paperName];
+        for (const faultName in paper.fault_types) {
+            const fault = paper.fault_types[faultName];
+            for (const relationshipKey in fault) {
+                const [y, x] = relationshipKey.split('_from_');
+                const canonicalY = PARAMETER_ALIASES[y] || y;
+                const canonicalX = PARAMETER_ALIASES[x] || x;
+
+                let modelId = `${paperName} - ${faultName}`;
+                let direction = null;
+
+                if (canonicalX === inputVar && canonicalY === outputVar) {
+                    if (x === 'SRL' || x === 'L_SR') modelId += ` (from ${x})`;
+                    direction = 'forward';
+                } else if (canonicalY === inputVar && canonicalX === outputVar) {
+                    if (y === 'SRL' || y === 'L_SR') modelId += ` (from ${y})`;
+                    direction = 'inverse';
+                }
+
+                if (direction !== null) {
+                    if (!grouped[paperName]) grouped[paperName] = {};
+                    grouped[paperName][modelId] = {
+                        paper: paperName, fault: faultName,
+                        key: relationshipKey, direction
+                    };
+                }
+            }
+        }
+    }
+    return grouped;
+}
+
+/**
  * Find all available models for a given input-output parameter pair
  * @param {string} inputVar - Input parameter
  * @param {string} outputVar - Output parameter
