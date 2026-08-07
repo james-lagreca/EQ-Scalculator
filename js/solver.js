@@ -26,7 +26,7 @@ function _calcEquation(form, x, a, b, direction) {
                 const result = Math.pow(10, a + b * Math.log10(x));
                     return result;
             } else { // inverse
-                if (x <= 0) return null;
+                if (x <= 0 || b === 0) return null;
                 const result = Math.pow(10, (Math.log10(x) - a) / b);
                 return result;
             }
@@ -36,6 +36,7 @@ function _calcEquation(form, x, a, b, direction) {
                 const result = a + b * Math.log10(x);
                 return result;
             } else { // inverse
+                if (b === 0) return null;
                 const result = Math.pow(10, (x - a) / b);
                 return result;
             }
@@ -44,7 +45,7 @@ function _calcEquation(form, x, a, b, direction) {
                 const result = Math.pow(10, a + b * x);
                 return result;
             } else { // inverse
-                if (x <= 0) return null;
+                if (x <= 0 || b === 0) return null;
                 const result = (Math.log10(x) - a) / b;
                 return result;
             }
@@ -231,6 +232,26 @@ function checkIfExtrapolating(modelParams, inputVal, inputUnit, direction = 'for
 }
 
 /**
+ * Parse a std_dev_a field into a standard deviation.
+ * Numeric values are used as-is (e.g. Yang et al. 2020). Leonard (2014)
+ * stores the one-standard-deviation RANGE of the intercept as a string
+ * (e.g. "-4.30 to -3.40" or "6.29-6.69"), so sigma is half the range
+ * width, regardless of the order the bounds are written in.
+ * @param {number|string|null} value - std_dev_a value from a model segment
+ * @returns {number|null} Standard deviation, or null if not usable
+ */
+function parseStdDevA(value) {
+    if (value === null || value === undefined) return null;
+    if (typeof value === 'number') return isNaN(value) ? null : value;
+    const range = String(value).match(/(-?\d+(?:\.\d+)?)\s*(?:to|–|-)\s*(-?\d+(?:\.\d+)?)/);
+    if (range) {
+        return Math.abs(parseFloat(range[2]) - parseFloat(range[1])) / 2;
+    }
+    const single = parseFloat(value);
+    return isNaN(single) ? null : single;
+}
+
+/**
  * Solve one simulation run with optional uncertainty
  * @param {Array} modelParams - Array of model segments
  * @param {number} inputVal - Input value
@@ -260,11 +281,9 @@ function solveOneSimulationRun(modelParams, inputVal, inputUnit, direction = 'fo
         // Apply model uncertainty if requested (mirrors Python solve_one_simulation_run)
         if (includeModelUncertainty) {
             // Apply std_dev_a noise to intercept coefficient (e.g. Leonard 2014)
-            if (targetSegment.std_dev_a !== null && targetSegment.std_dev_a !== undefined) {
-                const stdDevA = parseFloat(targetSegment.std_dev_a);
-                if (!isNaN(stdDevA)) {
-                    a = randomNormal(a, stdDevA);
-                }
+            const stdDevA = parseStdDevA(targetSegment.std_dev_a);
+            if (stdDevA !== null && stdDevA > 0) {
+                a = randomNormal(a, stdDevA);
             }
 
             // Apply log10_y_std_dev scatter directly to result (e.g. Wells & Coppersmith 1994)
