@@ -349,6 +349,12 @@
                 Relations may be piecewise: each is stored as ordered segments with validity
                 ranges, so bilinear and trilinear models are represented natively. Inputs
                 falling outside a model's published range are flagged as extrapolations.
+                Validity ranges are published against the relation's own independent variable,
+                so when a relation is solved inversely the range shown is mapped into the
+                variable you are entering. Note that a published range states the authors'
+                claimed applicability, which is not the same as the extent of the data they
+                fitted: a relation may publish no upper bound and still have no observations
+                anywhere near your input.
                 Monte Carlo sampling perturbs the regression intercept, or applies the
                 published scatter in log₁₀(Y), depending on which the source paper reports.
             </p>

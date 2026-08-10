@@ -281,6 +281,95 @@ const ahSegs = allenHayes['Subduction Interface (Bilinear)'].A_from_Mw;
 const gap = Math.abs(evalAt(ahSegs[0], 8.63) - evalAt(ahSegs[1], 8.63));
 check(gap > 0 && gap < 0.01, `A&H bilinear breakpoint gap is ${gap.toFixed(4)} log units (published rounding)`);
 
+// ---- 4c. Input domains and sigma propagation ----
+const domainOf = vm.runInContext('getInputDomain', ctx);
+const extrapolating = vm.runInContext('checkIfExtrapolating', ctx);
+
+// getInputDomain must never contradict checkIfExtrapolating: the domain is
+// what the comparison table prints, the flag is what it prints beside it.
+const PROBES = [1e-4, 0.05, 0.2, 1, 3, 6, 12, 40, 200, 1500, 1e4, 1e6, 1e10, 1e20];
+for (const rel of MODEL_FILES) {
+    const doc = JSON.parse(readFileSync(join(root, rel), 'utf8'));
+    for (const [paper, body] of Object.entries(doc)) {
+        for (const [style, rels] of Object.entries(body.fault_types || {})) {
+            for (const [key, segs] of Object.entries(rels)) {
+                for (const dir of ['forward', 'inverse']) {
+                    const dom = domainOf(segs, dir);
+                    check(dom !== null, `${paper}/${style}/${key} ${dir}: domain computed`);
+                    if (!dom || dom.degenerate) continue;
+
+                    const unit = segs[0].units[dir === 'forward' ? 'x' : 'y'];
+                    check(dom.unit === unit,
+                        `${paper}/${style}/${key} ${dir}: domain unit is the INPUT unit (${dom.unit} vs ${unit})`);
+                    check(dom.min === null || dom.max === null || dom.min <= dom.max,
+                        `${paper}/${style}/${key} ${dir}: domain min <= max`);
+
+                    for (const v of PROBES) {
+                        const inDomain = (dom.min === null || v >= dom.min) && (dom.max === null || v < dom.max);
+                        const flagged = extrapolating(segs, v, unit, dir) !== null;
+                        // Inside the union must never be reported as extrapolation.
+                        if (inDomain) {
+                            check(!flagged,
+                                `${paper}/${style}/${key} ${dir}: ${v} inside domain [${dom.min},${dom.max}] is not flagged`);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// The bug this suite was extended for: an inverse domain must be expressed in
+// the input variable, not in range_x. Leonard's AD domain is not a length.
+const leonardIPDS = faultTypes['Interplate Dip-Slip'].D_from_L;
+const adDomain = domainOf(leonardIPDS, 'inverse');
+check(adDomain.unit === 'm' && adDomain.max === null,
+    `Leonard IP-DS AD domain is unbounded above (was printed as "0 - 5360 m", a length)`);
+check(adDomain.min === null || adDomain.min < 1,
+    `Leonard IP-DS AD domain lower bound is a displacement, not ${adDomain.min}`);
+
+const tbSS = JSON.parse(readFileSync(
+    join(root, 'scaling_models/thingbaijam_etal_2017/thingbaijam_etal_2017.json'), 'utf8')
+)['Thingbaijam et al. 2017'].fault_types['Strike-Slip'].AD_from_L;
+const tbDomain = domainOf(tbSS, 'inverse');
+check(near(tbDomain.min, 0.138, 0.002) && near(tbDomain.max, 5.10, 0.02),
+    `Thingbaijam SS AD domain = ${tbDomain.min?.toFixed(3)}-${tbDomain.max?.toFixed(2)} m (want 0.138-5.10; was printed as "6 - 580 m", L in km)`);
+check(extrapolating(tbSS, 6, 'm', 'inverse') !== null,
+    'Thingbaijam SS at AD 6 m is flagged as extrapolation (6 m > 5.10 m)');
+
+// Sigma must pick up the 1/|b| Jacobian when the relation is inverted.
+const sigmaSS = tbSS[0].log10_y_std_dev, bSS = tbSS[0].coefficients.b;
+const lSS = solve(tbSS, 6, 'm', 'inverse').result;
+check(near(lSS, 713.1, 0.5), `Thingbaijam SS AD 6 m -> L = ${lSS?.toFixed(1)} km`);
+check(near(lSS / Math.pow(10, sigmaSS / Math.abs(bSS)), 318.7, 1) &&
+      near(lSS * Math.pow(10, sigmaSS / Math.abs(bSS)), 1596, 5),
+    `Thingbaijam SS inverse sigma = ${(sigmaSS / Math.abs(bSS)).toFixed(3)} gives 318.7-1596 km (raw sigma would give 377.7-1346)`);
+
+// Saturated segments have no invertible domain, and must say so rather than
+// reporting an unbounded range or Infinity.
+const satW = faultTypes['Interplate Strike-Slip'].W_from_L;
+const satDomain = domainOf(satW, 'inverse');
+check(satDomain.max !== null && Number.isFinite(satDomain.max) && near(satDomain.max, 17602, 5),
+    `Leonard IP-SS invertible W domain caps at ${satDomain.max?.toFixed(0)} m (width saturation)`);
+check(solve(satW, 40000, 'm', 'inverse').result === null,
+    'Leonard IP-SS W above saturation returns null, not Infinity');
+check(extrapolating(satW, 40000, 'm', 'inverse') !== null,
+    'Leonard IP-SS W above saturation is flagged as extrapolation (was reported in range)');
+
+// Leonard publishes intercept uncertainty rather than total scatter; the
+// comparison table falls back to it, so it must parse for every segment.
+const parseSigma = vm.runInContext('parseStdDevA', ctx);
+for (const [style, rels] of Object.entries(faultTypes)) {
+    for (const [key, segs] of Object.entries(rels)) {
+        for (let i = 0; i < segs.length; i++) {
+            if (segs[i].std_dev_a === null || segs[i].std_dev_a === undefined) continue;
+            const sg = parseSigma(segs[i].std_dev_a);
+            check(sg !== null && sg > 0 && sg < 2,
+                `Leonard ${style}/${key}[${i}]: std_dev_a "${segs[i].std_dev_a}" parses to a plausible sigma (${sg})`);
+        }
+    }
+}
+
 // ---- 5. Documented paper quirks (informational, non-failing) ----
 for (const ft of Object.keys(faultTypes)) {
     const derived = HK(a0(ft, 'M0_from_W') + 3 * 3.75);

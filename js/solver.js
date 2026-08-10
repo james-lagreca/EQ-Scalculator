@@ -57,6 +57,97 @@ function _calcEquation(form, x, a, b, direction) {
 }
 
 /**
+ * Validity range of one segment, expressed in the INPUT variable's space.
+ *
+ * `range_x` is always stated in terms of X. When solving forward that IS the
+ * input, so it is returned unchanged. When solving inversely the input is Y,
+ * so the bounds are pushed through the forward equation — otherwise a length
+ * range gets reported as though it were a displacement range.
+ *
+ * @param {Object} segment - A model segment
+ * @param {string} direction - 'forward' or 'inverse'
+ * @returns {Object} {min, max} in input units; null on either side means unbounded
+ */
+function getSegmentDomain(segment, direction) {
+    const rangeX = segment.range_x || [null, null];
+    const minX = rangeX[0];
+    const maxX = rangeX[1];
+
+    if (direction === 'forward') {
+        return { min: minX, max: maxX };
+    }
+
+    const { a, b } = segment.coefficients;
+    const yAt = (x) => {
+        if (x === null) return null;
+        // _calcEquation refuses x <= 0 for the log-X forms, but a lower bound
+        // of exactly 0 is a real bound, not an absent one: for
+        // log10(Y) = a + b*log10(X) with b > 0, Y tends to 0 as X tends to 0.
+        // Without this the domain reads "no lower bound" when it is [0, ...).
+        if (x === 0 && segment.equation_form === 'log10(Y) = a + b * log10(X)') {
+            return b > 0 ? 0 : null;
+        }
+        return _calcEquation(segment.equation_form, x, a, b, 'forward');
+    };
+
+    const yAtMinX = yAt(minX);
+    const yAtMaxX = yAt(maxX);
+
+    // A saturated segment (b = 0) maps every X to one Y, so it has no
+    // invertible domain. _calcEquation already refuses to invert it.
+    if (b === 0) return { min: null, max: null, degenerate: true };
+
+    // b < 0 flips the mapping, so sort rather than assume ordering.
+    if (yAtMinX === null || yAtMaxX === null || yAtMinX < yAtMaxX) {
+        return { min: yAtMinX, max: yAtMaxX };
+    }
+    return { min: yAtMaxX, max: yAtMinX };
+}
+
+/**
+ * Validity range of a whole relation in the input variable's space: the union
+ * across its segments, which are contiguous by construction.
+ *
+ * @param {Array} modelParams - Array of model segments
+ * @param {string} direction - 'forward' or 'inverse'
+ * @returns {Object|null} {min, max, unit, degenerate} — null bounds mean the
+ *                        publication states no bound on that side
+ */
+function getInputDomain(modelParams, direction) {
+    if (!modelParams || !modelParams.length) return null;
+
+    const unitKey = direction === 'forward' ? 'x' : 'y';
+    const unit = modelParams[0].units ? modelParams[0].units[unitKey] : null;
+
+    let min = Infinity;
+    let max = -Infinity;
+    let sawUnboundedLow = false;
+    let sawUnboundedHigh = false;
+    let degenerate = true;
+
+    for (const segment of modelParams) {
+        const domain = getSegmentDomain(segment, direction);
+        if (domain.degenerate) continue;
+        degenerate = false;
+
+        if (domain.min === null) sawUnboundedLow = true;
+        else min = Math.min(min, domain.min);
+
+        if (domain.max === null) sawUnboundedHigh = true;
+        else max = Math.max(max, domain.max);
+    }
+
+    if (degenerate) return { min: null, max: null, unit, degenerate: true };
+
+    return {
+        min: sawUnboundedLow || min === Infinity ? null : min,
+        max: sawUnboundedHigh || max === -Infinity ? null : max,
+        unit,
+        degenerate: false
+    };
+}
+
+/**
  * Get the appropriate model segment for a given input value
  * @param {Array} modelParams - Array of model parameter objects
  * @param {number} convertedInput - Input value in model's native units
@@ -65,54 +156,23 @@ function _calcEquation(form, x, a, b, direction) {
  */
 function getTargetSegment(modelParams, convertedInput, direction) {
     if (convertedInput === null) return null;
-    
+
     for (const segment of modelParams) {
-        let isInRange = false;
-        
-        if (direction === 'forward') {
-            const rangeX = segment.range_x || [null, null];
-            const minX = rangeX[0];
-            const maxX = rangeX[1];
-            
-            if ((minX === null || convertedInput >= minX) && 
-                (maxX === null || convertedInput < maxX)) {
-                isInRange = true;
-            }
-        } else { // 'inverse' direction
-            const rangeX = segment.range_x || [null, null];
-            const minX = rangeX[0];
-            const maxX = rangeX[1];
-            
-            const yAtMinX = minX !== null ? 
-                _calcEquation(segment.equation_form, minX, 
-                    segment.coefficients.a, segment.coefficients.b, 'forward') : null;
-            const yAtMaxX = maxX !== null ? 
-                _calcEquation(segment.equation_form, maxX, 
-                    segment.coefficients.a, segment.coefficients.b, 'forward') : null;
-            
-            let minY, maxY;
-            if (yAtMinX === null || yAtMaxX === null || yAtMinX < yAtMaxX) {
-                minY = yAtMinX;
-                maxY = yAtMaxX;
-            } else {
-                minY = yAtMaxX;
-                maxY = yAtMinX;
-            }
-            
-            if ((minY === null || convertedInput >= minY) && 
-                (maxY === null || convertedInput < maxY)) {
-                isInRange = true;
-            }
-        }
-        
-        if (isInRange) {
+        const domain = getSegmentDomain(segment, direction);
+
+        // A saturated segment has no invertible domain, so it can never be
+        // matched on input value; it is only reachable via the fallback below.
+        if (domain.degenerate) continue;
+
+        if ((domain.min === null || convertedInput >= domain.min) &&
+            (domain.max === null || convertedInput < domain.max)) {
             return segment;
         }
     }
-    
+
     // If no segment found, return first or last based on input value
     if (!modelParams.length) return null;
-    
+
     const firstRangeX = (modelParams[0].range_x || [0])[0];
     return convertedInput < firstRangeX ? modelParams[0] : modelParams[modelParams.length - 1];
 }
@@ -180,47 +240,18 @@ function checkIfExtrapolating(modelParams, inputVal, inputUnit, direction = 'for
             convertUnits(inputVal, inputUnit, modelInputUnit) : inputVal;
         
         let isWithinAnyRange = false;
-        
+
         for (const segment of modelParams) {
-            if (direction === 'forward') {
-                const rangeX = segment.range_x || [null, null];
-                const minX = rangeX[0];
-                const maxX = rangeX[1];
-                
-                if ((minX === null || convertedInput >= minX) && 
-                    (maxX === null || convertedInput < maxX)) {
-                    isWithinAnyRange = true;
-                    break;
-                }
-            } else { // 'inverse'
-                const rangeX = segment.range_x || [null, null];
-                const minX = rangeX[0];
-                const maxX = rangeX[1];
-                
-                const yAtMinX = minX !== null ? 
-                    _calcEquation(segment.equation_form, minX, 
-                        segment.coefficients.a, segment.coefficients.b, 'forward') : null;
-                const yAtMaxX = maxX !== null ? 
-                    _calcEquation(segment.equation_form, maxX, 
-                        segment.coefficients.a, segment.coefficients.b, 'forward') : null;
-                
-                let minY, maxY;
-                if (yAtMinX === null || yAtMaxX === null || yAtMinX < yAtMaxX) {
-                    minY = yAtMinX;
-                    maxY = yAtMaxX;
-                } else {
-                    minY = yAtMaxX;
-                    maxY = yAtMinX;
-                }
-                
-                if ((minY === null || convertedInput >= minY) && 
-                    (maxY === null || convertedInput < maxY)) {
-                    isWithinAnyRange = true;
-                    break;
-                }
+            const domain = getSegmentDomain(segment, direction);
+            if (domain.degenerate) continue;
+
+            if ((domain.min === null || convertedInput >= domain.min) &&
+                (domain.max === null || convertedInput < domain.max)) {
+                isWithinAnyRange = true;
+                break;
             }
         }
-        
+
         if (!isWithinAnyRange) {
             return "Warning: Input is outside the model's recommended validity range. Result is an extrapolation.";
         }

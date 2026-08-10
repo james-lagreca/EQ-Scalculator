@@ -419,12 +419,28 @@ input[type="checkbox"] { accent-color: var(--accent); }
     min-width: 180px;
 }
 
-.cmp-range {
+/* Needs to out-specify `.cmp-table td { white-space: nowrap }` above,
+   or a long range string overflows into the neighbouring column. */
+.cmp-table td.cmp-range {
     font-family: var(--font-mono);
     font-size: var(--fs-xs);
     color: var(--ink-mute);
-    max-width: 170px;
+    min-width: 190px;
+    max-width: 260px;
     white-space: normal;
+}
+
+.cmp-footnote-mark {
+    color: var(--ink-faint);
+    font-family: var(--font-ui);
+    padding-left: 1px;
+}
+
+.cmp-footnote {
+    font-size: var(--fs-xs);
+    color: var(--ink-mute);
+    max-width: 84ch;
+    margin: var(--s3) 0 0;
 }
 
 .cmp-in-range { color: var(--ok); }
