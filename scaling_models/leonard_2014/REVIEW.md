@@ -1,6 +1,6 @@
 # Leonard (2014) transcription review
 
-**Reviewed:** 2026-08-07 · **Data file:** `leonard_2014.json` · **Source:** Leonard, M. (2014), *Self-Consistent Earthquake Fault-Scaling Relations: Update and Extension to Stable Continental Strike-Slip Faults*, BSSA 104(6), 2953–2965, doi:10.1785/0120140087 (PDF committed alongside this file).
+**Reviewed:** 2026-08-07 · **Data file:** `leonard_2014.json` · **Source:** Leonard, M. (2014), *Self-Consistent Earthquake Fault-Scaling Relations: Update and Extension to Stable Continental Strike-Slip Faults*, BSSA 104(6), 2953–2965, doi:10.1785/0120140087. The paper PDF is not redistributed here (publisher copyright); place a local copy in this directory — it is gitignored — to re-check any figure quoted below.
 
 Triggered by a concern that the strike-slip displacement↔length behaviour was wrong. Every coefficient in the JSON was checked digit-by-digit against the paper's Table 3 (SI/metre relations) and Table 4 (Mw relations), against Leonard's self-consistency framework, and against OpenQuake's `Leonard2014_*` implementation for the Mw–A anchors (3.99/4.00/4.18/4.19 — all match).
 
@@ -13,7 +13,7 @@ Leonard's relations are not independent regressions; they all derive from:
 - `D_Av = C2 * A^0.5` (`C2 = 10^a(D_from_A)`; interplate SS 10^-4.432, SCR SS 10^-4.149)
 - `Mw = (2/3) * log10(M0[N·m]) - 6.07` (Hanks & Kanamori)
 
-Every entry can therefore be cross-derived from the others. `tools/verify_leonard_2014.mjs` automates these checks.
+Every entry can therefore be cross-derived from the others. `tools/verify_models.mjs` automates these checks.
 
 ## Verdict summary
 
@@ -84,7 +84,7 @@ Context for interpreting it:
 ## Re-verifying
 
 ```
-node tools/verify_leonard_2014.mjs
+node tools/verify_models.mjs
 ```
 
-asserts breakpoint continuity, all framework identities, the corrected values, spot calculations through the real `js/solver.js`, and the sigma parser.
+asserts breakpoint continuity, all framework identities, the corrected values, spot calculations through the real `js/solver.js`, and the sigma parser. Pass a path as an argument to point the Leonard checks at an alternative copy of the file.

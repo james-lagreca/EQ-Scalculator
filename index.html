@@ -3,7 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EQ-Scalculator - Earthquake Scaling Relationship Calculator</title>
+    <title>EQ-Scalculator — Earthquake Scaling Relationship Calculator</title>
+    <meta name="description" content="Calculate, compare and explore empirical earthquake fault-scaling relationships between magnitude, seismic moment, rupture length, width, area and displacement.">
+    <meta name="author" content="James La Greca">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="EQ-Scalculator — Earthquake Scaling Relationship Calculator">
+    <meta property="og:description" content="Solve published earthquake fault-scaling relations in both directions, with uncertainty propagation, multi-model comparison and chained calculations.">
+    <meta property="og:url" content="https://james-lagreca.github.io/EQ-Scalculator/">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23FCFBF9'/%3E%3Cpath d='M2 20 L8 20 L11 9 L15 26 L19 14 L22 20 L30 20' fill='none' stroke='%238A3324' stroke-width='2.2' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.0/plotly.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <link rel="stylesheet" href="styles.css">
@@ -11,44 +18,48 @@
 <body>
     <div class="container">
         <header>
-            <h1>🌍 EQ-Scalculator</h1>
-            <p class="subtitle">Earthquake Scaling Relationship Calculator</p>
-            <p class="description">Interactive tool for calculating, exploring, and comparing empirical earthquake fault-scaling relationships</p>
+            <h1>EQ-Scalculator</h1>
+            <p class="subtitle">Empirical earthquake fault-scaling relationships</p>
+            <p class="masthead-meta">
+                <span id="modelCount">&nbsp;</span>
+                <a href="#references">References</a> ·
+                <a href="https://github.com/james-lagreca/EQ-Scalculator">Source</a>
+            </p>
         </header>
 
         <div class="tabs">
-            <div class="tab active" onclick="switchTab(0)">📊 Deterministic Calculation</div>
-            <div class="tab" onclick="switchTab(1)">🎲 Monte Carlo Simulation</div>
-            <div class="tab" onclick="switchTab(2)">📈 Explore Relationships</div>
-            <div class="tab" onclick="switchTab(3)">📋 Model Comparison</div>
-            <div class="tab" onclick="switchTab(4)">⛓️ Chain Calculations</div>
+            <div class="tab active" onclick="switchTab(0)">Deterministic</div>
+            <div class="tab" onclick="switchTab(1)">Monte Carlo</div>
+            <div class="tab" onclick="switchTab(2)">Explore</div>
+            <div class="tab" onclick="switchTab(3)">Comparison</div>
+            <div class="tab" onclick="switchTab(4)">Chain</div>
         </div>
 
         <!-- Tab 1: Deterministic Calculation -->
         <div class="tab-content active" id="tab1">
             <div class="section">
-                <h2>1. Configuration</h2>
+                <h2>Configuration</h2>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="inputParam">Input Parameter</label>
+                        <label for="inputParam">Input parameter</label>
                         <select id="inputParam" onchange="updateDeterministicConfig()">
                             <!-- Will be populated by JS -->
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="outputParam">Output Parameter</label>
+                        <label for="outputParam">Output parameter</label>
                         <select id="outputParam" onchange="updateDeterministicConfig()">
                             <!-- Will be populated by JS -->
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="selectedModel">Available Models</label>
+                        <label for="selectedModel">Model</label>
                         <select id="selectedModel">
                             <option value="">No models available</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="outputUnit">Output Unit</label>
+                        <label for="outputUnit">Output unit</label>
                         <select id="outputUnit">
                             <!-- Will be populated by JS -->
                         </select>
@@ -57,15 +68,15 @@
             </div>
 
             <div class="section">
-                <h2>2. Input Data</h2>
+                <h2>Input data</h2>
                 <div class="radio-group">
                     <label class="radio-option">
                         <input type="radio" name="calcMode" value="single" checked onchange="toggleCalcMode()">
-                        <span>Single Input</span>
+                        <span>Single value</span>
                     </label>
                     <label class="radio-option">
                         <input type="radio" name="calcMode" value="batch" onchange="toggleCalcMode()">
-                        <span>File Upload (Batch)</span>
+                        <span>CSV batch</span>
                     </label>
                 </div>
                 
@@ -76,7 +87,7 @@
                             <input type="number" id="inputValue" value="6.0" step="0.0001">
                         </div>
                         <div class="form-group">
-                            <label for="inputUnit">Input Unit</label>
+                            <label for="inputUnit">Input unit</label>
                             <select id="inputUnit">
                                 <!-- Will be populated by JS -->
                             </select>
@@ -86,11 +97,11 @@
 
                 <div id="batchInputSection" class="hidden">
                     <div class="form-group">
-                        <label for="fileUpload">Upload CSV or Excel File</label>
+                        <label for="fileUpload">Upload CSV file</label>
                         <input type="file" id="fileUpload" accept=".csv" onchange="handleFileUpload(event)">
                     </div>
                     <div id="batchPreview" class="hidden">
-                        <h4>File Preview</h4>
+                        <h4>File preview</h4>
                         <div id="columnSelection" class="form-row"></div>
                     </div>
                 </div>
@@ -104,22 +115,22 @@
         <!-- Tab 2: Monte Carlo Simulation -->
         <div class="tab-content" id="tab2">
             <div class="section">
-                <h2>1. Configuration</h2>
+                <h2>Configuration</h2>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="mcInputParam">Input Parameter</label>
+                        <label for="mcInputParam">Input parameter</label>
                         <select id="mcInputParam" onchange="updateMonteCarloConfig()">
                             <!-- Will be populated by JS -->
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="mcOutputParam">Output Parameter</label>
+                        <label for="mcOutputParam">Output parameter</label>
                         <select id="mcOutputParam" onchange="updateMonteCarloConfig()">
                             <!-- Will be populated by JS -->
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="mcOutputUnit">Output Unit</label>
+                        <label for="mcOutputUnit">Output unit</label>
                         <select id="mcOutputUnit">
                             <!-- Will be populated by JS -->
                         </select>
@@ -128,30 +139,30 @@
             </div>
 
             <div class="section">
-                <h2>2. Input Data & Simulation Parameters</h2>
+                <h2>Input data and simulation parameters</h2>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="mcInputValue">Mean Input Value</label>
+                        <label for="mcInputValue">Mean input value</label>
                         <input type="number" id="mcInputValue" value="6.0" step="0.01">
                     </div>
                     <div class="form-group">
-                        <label for="mcInputUnit">Input Unit</label>
+                        <label for="mcInputUnit">Input unit</label>
                         <select id="mcInputUnit">
                             <!-- Will be populated by JS -->
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="mcSimulations">Number of Simulations</label>
+                        <label for="mcSimulations">Simulations</label>
                         <input type="number" id="mcSimulations" value="1000" min="100" max="50000" step="100">
                     </div>
                 </div>
             </div>
 
             <div class="section">
-                <h2>3. Uncertainty Configuration</h2>
+                <h2>Uncertainty</h2>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Input Value Uncertainty (Epistemic)</label>
+                        <label>Input value uncertainty (epistemic)</label>
                         <div class="radio-group" style="flex-direction: column; align-items: flex-start;">
                             <label class="radio-option">
                                 <input type="radio" name="uncType" value="none" checked>
@@ -159,7 +170,7 @@
                             </label>
                             <label class="radio-option">
                                 <input type="radio" name="uncType" value="absolute">
-                                <span>Absolute Error (±)</span>
+                                <span>Absolute (±)</span>
                             </label>
                             <label class="radio-option">
                                 <input type="radio" name="uncType" value="percentage">
@@ -169,21 +180,21 @@
                         <input type="number" id="mcUncertainty" value="5" min="0" step="0.1" style="margin-top: 10px;">
                     </div>
                     <div class="form-group">
-                        <label for="includeModelUnc">Model Uncertainty (Aleatory)</label>
+                        <label for="includeModelUnc">Model uncertainty (aleatory)</label>
                         <div class="toggle-container">
                             <div class="toggle active" onclick="toggleModelUncertainty(this)">
                                 <div class="toggle-slider"></div>
                             </div>
-                            <span>Include Model Regression Uncertainty</span>
+                            <span>Include model regression uncertainty</span>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="section">
-                <h2>4. Model Selection</h2>
+                <h2>Model selection</h2>
                 <div id="mcModelSelection">
-                    <p>Select models and assign weights (must sum to 100%):</p>
+                    <p class="section-description">Select models and assign weights. Weights must sum to 100%.</p>
                     <div id="mcModelList"></div>
                     <div class="metric" style="margin-top: 15px;">
                         <div class="metric-label">Total Weight</div>
@@ -192,7 +203,7 @@
                 </div>
             </div>
 
-            <button onclick="runMonteCarlo()" class="btn-primary" id="mcRunBtn">Run Simulation</button>
+            <button onclick="runMonteCarlo()" class="btn-primary" id="mcRunBtn">Run simulation</button>
             
             <div id="mcResults"></div>
         </div>
@@ -200,30 +211,30 @@
         <!-- Tab 3: Explore Relationships -->
         <div class="tab-content" id="tab3">
             <div class="section">
-                <h2>Explore and Compare Scaling Relationships</h2>
+                <h2>Explore relationships</h2>
                 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="plotXParam">X-Axis Parameter</label>
+                        <label for="plotXParam">X-axis parameter</label>
                         <select id="plotXParam" onchange="updatePlot()">
                             <!-- Will be populated by JS -->
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="plotYParam">Y-Axis Parameter</label>
+                        <label for="plotYParam">Y-axis parameter</label>
                         <select id="plotYParam" onchange="updatePlot()">
                             <!-- Will be populated by JS -->
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="plotXScale">X-Axis Scale</label>
+                        <label for="plotXScale">X-axis scale</label>
                         <select id="plotXScale" onchange="updatePlot()">
                             <option value="linear">Linear</option>
                             <option value="log">Log</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="plotYScale">Y-Axis Scale</label>
+                        <label for="plotYScale">Y-axis scale</label>
                         <select id="plotYScale" onchange="updatePlot()">
                             <option value="linear">Linear</option>
                             <option value="log" selected>Log</option>
@@ -237,55 +248,55 @@
         <!-- Tab 4: Model Comparison -->
         <div class="tab-content" id="tab4">
             <div class="section">
-                <h2>1. Comparison Configuration</h2>
+                <h2>Configuration</h2>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="cmpInputParam">Input Parameter</label>
+                        <label for="cmpInputParam">Input parameter</label>
                         <select id="cmpInputParam" onchange="updateComparisonConfig()"></select>
                     </div>
                     <div class="form-group">
-                        <label for="cmpOutputParam">Output Parameter</label>
+                        <label for="cmpOutputParam">Output parameter</label>
                         <select id="cmpOutputParam" onchange="updateComparisonConfig()"></select>
                     </div>
                     <div class="form-group">
-                        <label for="cmpInputValue">Input Value</label>
+                        <label for="cmpInputValue">Input value</label>
                         <input type="number" id="cmpInputValue" value="7.0" step="0.0001">
                     </div>
                     <div class="form-group">
-                        <label for="cmpInputUnit">Input Unit</label>
+                        <label for="cmpInputUnit">Input unit</label>
                         <select id="cmpInputUnit"></select>
                     </div>
                     <div class="form-group">
-                        <label for="cmpOutputUnit">Output Unit</label>
+                        <label for="cmpOutputUnit">Output unit</label>
                         <select id="cmpOutputUnit"></select>
                     </div>
                 </div>
             </div>
 
             <div class="section">
-                <h2>2. Select Models</h2>
+                <h2>Select models</h2>
                 <div class="cmp-model-controls">
-                    <button class="btn-secondary" onclick="selectAllComparisonModels(true)">Select All</button>
-                    <button class="btn-secondary" onclick="selectAllComparisonModels(false)">Deselect All</button>
+                    <button class="btn-secondary" onclick="selectAllComparisonModels(true)">Select all</button>
+                    <button class="btn-secondary" onclick="selectAllComparisonModels(false)">Deselect all</button>
                 </div>
                 <div id="cmpModelList"></div>
             </div>
 
-            <button onclick="runComparison()" class="btn-primary">Compare Models</button>
+            <button onclick="runComparison()" class="btn-primary">Compare models</button>
             <div id="cmpResults"></div>
         </div>
 
         <!-- Tab 5: Chain Calculations -->
         <div class="tab-content" id="tab5">
             <div class="section">
-                <h2>Chain Calculator</h2>
+                <h2>Chain calculator</h2>
                 <p class="section-description">
                     Build multi-step calculations where the output of each step becomes the input for the next.
-                    Example: Mw → A → Average Slip.
+                    For example Mw → A → AD.
                 </p>
 
-                <div class="section" style="background: white; border: 2px solid #667eea;">
-                    <h3>Starting Value</h3>
+                <div class="section section-nested">
+                    <h3>Starting value</h3>
                     <div class="form-row">
                         <div class="form-group">
                             <label for="chainStartParam">Parameter</label>
@@ -305,24 +316,56 @@
                 <div id="chainSteps"></div>
 
                 <div class="chain-add-controls">
-                    <button class="btn-secondary" onclick="addChainStep()" id="chainAddBtn">+ Add Step</button>
-                    <button class="btn-secondary" onclick="resetChain()">↺ Reset Chain</button>
+                    <button class="btn-secondary" onclick="addChainStep()" id="chainAddBtn">Add step</button>
+                    <button class="btn-secondary" onclick="resetChain()">Reset chain</button>
                 </div>
 
-                <button class="btn-primary" onclick="runChain()">Run Chain</button>
+                <button class="btn-primary" onclick="runChain()">Run chain</button>
             </div>
 
             <div id="chainResults"></div>
         </div>
 
+        <div class="section references" id="references">
+            <h2>References</h2>
+            <p class="section-description">
+                Coefficients are transcribed from the publications below. Please cite the
+                original paper for whichever relation you use, not only this tool. Where a
+                published table is internally inconsistent, the correction and its derivation
+                are documented alongside the data rather than applied silently.
+            </p>
+            <ol id="referenceList"></ol>
+        </div>
+
+        <div class="section">
+            <h2>Method notes</h2>
+            <p class="section-description">
+                Relations are solved in both directions. An inverse solution is an exact
+                algebraic inversion of the stored forward relation rather than a separate
+                regression — sound where the slope is theoretically fixed, but subject to
+                regression dilution when inverting an ordinary least-squares fit.
+            </p>
+            <p class="section-description">
+                Relations may be piecewise: each is stored as ordered segments with validity
+                ranges, so bilinear and trilinear models are represented natively. Inputs
+                falling outside a model's published range are flagged as extrapolations.
+                Monte Carlo sampling perturbs the regression intercept, or applies the
+                published scatter in log₁₀(Y), depending on which the source paper reports.
+            </p>
+        </div>
     </div>
 
-    <footer style="text-align: center; padding: 30px; color: white; background: rgba(0,0,0,0.2); margin-top: 40px;">
-        <p>EQ-Scalculator - Open Source Earthquake Scaling Calculator</p>
-        <p><a href="https://github.com/james-lagreca/EQ-Scalculator" style="color: white; text-decoration: underline;">View on GitHub</a></p>
+    <footer>
+        <p>
+            EQ-Scalculator ·
+            <a href="https://github.com/james-lagreca/EQ-Scalculator">Source and licence</a> ·
+            <a href="https://github.com/james-lagreca/EQ-Scalculator/blob/master/CITATION.cff">How to cite</a>
+        </p>
+        <p>Computation runs entirely in your browser; no data is transmitted.</p>
     </footer>
 
     <script src="js/units.js"></script>
+    <script src="js/format.js"></script>
     <script src="js/solver.js"></script>
     <script src="js/models.js"></script>
     <script src="js/app.js"></script>

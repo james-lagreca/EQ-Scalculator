@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+title: "EQ-Scalculator: Earthquake Scaling Relationship Calculator"
+message: "If you use this software, please cite it using the metadata from this file, and also cite the underlying scaling-relation publications listed in the README."
+type: software
+authors:
+  - given-names: James
+    family-names: La Greca
+    affiliation: "University of Melbourne"
+    # TODO: add your ORCID here, e.g.
+    # orcid: "https://orcid.org/0000-0000-0000-0000"
+repository-code: "https://github.com/james-lagreca/EQ-Scalculator"
+url: "https://james-lagreca.github.io/EQ-Scalculator/"
+abstract: >-
+  A client-side web application for calculating, comparing and exploring
+  empirical earthquake fault-scaling relationships. It solves published
+  relations between moment magnitude, seismic moment, rupture length, width,
+  area, surface rupture length, and average and maximum displacement, in both
+  directions, with piecewise (multi-segment) support, unit conversion,
+  Monte Carlo uncertainty propagation, multi-model comparison and chained
+  calculations. Coefficients are transcribed from the primary literature and
+  checked by an automated self-consistency verification suite.
+keywords:
+  - earthquake
+  - fault scaling
+  - seismic hazard
+  - magnitude-area scaling
+  - rupture dimensions
+  - stable continental region
+  - seismology
+license: MIT
+version: 1.0.0
+# TODO: after the first Zenodo release, add:
+# doi: "10.5281/zenodo.XXXXXXX"

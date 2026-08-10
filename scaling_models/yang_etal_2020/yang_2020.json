@@ -1,6 +1,7 @@
 {
-  "Yang et al. 2020": {
-    "description": "Scaling relationships for Australian intraplate reverse-faulting earthquakes from Yang et al. (2020), GSA Bulletin.",
+  "Yang et al. 2021": {
+    "description": "Scaling relationships for Australian intraplate reverse-faulting earthquakes from Yang et al. (2021), GSA Bulletin. Fitted to 11 historical (1968-2018) Mw 4.7-6.6 Australian reverse-faulting surface ruptures, combined with the Ungava event. Note MD here is maximum surface displacement; the paper reports MD is approximated by 3.3 +/- 1.6 (1 sigma) x AD.",
+    "citation": "Yang, H., Quigley, M., and King, T. (2021). Surface slip distributions and geometric complexity of intraplate reverse-faulting earthquakes. GSA Bulletin, 133(9/10), 1909-1929. doi:10.1130/B35809.1",
     "fault_types": {
       "SCR - Reverse": {
         "MD_from_Mw": [

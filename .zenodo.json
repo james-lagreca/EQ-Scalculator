@@ -1,0 +1,61 @@
+{
+  "title": "EQ-Scalculator: Earthquake Scaling Relationship Calculator",
+  "upload_type": "software",
+  "license": "MIT",
+  "access_right": "open",
+  "creators": [
+    {
+      "name": "La Greca, James",
+      "affiliation": "University of Melbourne"
+    }
+  ],
+  "description": "<p>A client-side web application for calculating, comparing and exploring empirical earthquake fault-scaling relationships. It solves published relations between moment magnitude (Mw), seismic moment (M0), rupture length (L), width (W), area (A), surface rupture length (SRL), and average (AD) and maximum (MD) displacement, in both directions, with piecewise (multi-segment) support, unit conversion, Monte Carlo uncertainty propagation, multi-model comparison and chained calculations.</p><p>Coefficients are transcribed from the primary literature and checked by an automated self-consistency verification suite. Where a published table is internally inconsistent, the correction and its derivation are documented alongside the data rather than applied silently.</p>",
+  "keywords": [
+    "earthquake",
+    "fault scaling",
+    "seismic hazard",
+    "magnitude-area scaling",
+    "rupture dimensions",
+    "stable continental region",
+    "seismology",
+    "PSHA"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "10.1785/0120140087",
+      "relation": "references",
+      "resource_type": "publication-article",
+      "scheme": "doi"
+    },
+    {
+      "identifier": "10.1785/0120170017",
+      "relation": "references",
+      "resource_type": "publication-article",
+      "scheme": "doi"
+    },
+    {
+      "identifier": "10.1130/B35809.1",
+      "relation": "references",
+      "resource_type": "publication-article",
+      "scheme": "doi"
+    },
+    {
+      "identifier": "10.1785/gssrl.81.6.941",
+      "relation": "references",
+      "resource_type": "publication-article",
+      "scheme": "doi"
+    },
+    {
+      "identifier": "10.1785/0120160255",
+      "relation": "references",
+      "resource_type": "publication-article",
+      "scheme": "doi"
+    },
+    {
+      "identifier": "10.1785/0120230114",
+      "relation": "references",
+      "resource_type": "publication-article",
+      "scheme": "doi"
+    }
+  ]
+}

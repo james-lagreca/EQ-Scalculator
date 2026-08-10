@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const errorMsg = `
             <div style="padding: 40px; text-align: center;">
                 <div class="error">
-                    <h2>⚠️ Error Loading Models</h2>
+                    <h2>Error loading models</h2>
                     <p>Could not load scaling model files. Please check:</p>
                     <ul style="text-align: left; margin: 20px auto; max-width: 500px;">
                         <li>JSON files are in correct locations</li>
@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const warningMsg = `
             <div style="padding: 40px; text-align: center;">
                 <div class="warning">
-                    <h2>⚠️ No Models Loaded</h2>
+                    <h2>No models loaded</h2>
                     <p>No scaling models were found. Please ensure JSON files exist in the scaling_models directory.</p>
                 </div>
             </div>
@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     console.log(`Successfully loaded ${Object.keys(allModels).length} model(s)`);
     initializeUI();
+    renderReferences();
 });
 
 function initializeUI() {
@@ -108,6 +109,28 @@ function populateSelect(elementId, options, selectedValue = null) {
     if (selectedValue) {
         select.value = selectedValue;
     }
+}
+
+/**
+ * Populate a unit <select>. Option values stay as the raw unit strings the
+ * solver expects; only the visible label is prettified ("km^2" -> "km²").
+ * @param {string} elementId
+ * @param {string[]} units
+ * @param {string} [selectedValue]
+ */
+function populateUnitSelect(elementId, units, selectedValue = null) {
+    const select = document.getElementById(elementId);
+    if (!select) return;
+    select.innerHTML = '';
+
+    units.forEach(unit => {
+        const opt = document.createElement('option');
+        opt.value = unit;
+        opt.textContent = formatUnit(unit) || unit;
+        select.appendChild(opt);
+    });
+
+    if (selectedValue) select.value = selectedValue;
 }
 
 /**
@@ -187,8 +210,8 @@ function updateDeterministicConfig() {
     const inputUnits = getUnitsForParam(inputParam);
     const outputUnits = getUnitsForParam(outputParam);
 
-    populateSelect('inputUnit', inputUnits, inputUnits[0]);
-    populateSelect('outputUnit', outputUnits, outputUnits[0]);
+    populateUnitSelect('inputUnit', inputUnits, inputUnits[0]);
+    populateUnitSelect('outputUnit', outputUnits, outputUnits[0]);
 }
 
 // Update Monte Carlo configuration
@@ -200,8 +223,8 @@ function updateMonteCarloConfig() {
     const inputUnits = getUnitsForParam(inputParam);
     const outputUnits = getUnitsForParam(outputParam);
     
-    populateSelect('mcInputUnit', inputUnits, inputUnits[0]);
-    populateSelect('mcOutputUnit', outputUnits, outputUnits[0]);
+    populateUnitSelect('mcInputUnit', inputUnits, inputUnits[0]);
+    populateUnitSelect('mcOutputUnit', outputUnits, outputUnits[0]);
     
     // Update model selection
     updateMCModelList();
@@ -410,15 +433,51 @@ function calculateSingle() {
         }
         
         console.log('Final result:', { result, resultUnit, warning });
-        displayResult(result, resultUnit, outputParam, outputUnit, warning);
-        
+        displayResult(result, resultUnit, outputParam, outputUnit, warning, modelInfo, inputValue, inputUnit);
+
     } catch (error) {
         console.error('Error in calculateSingle:', error);
         showError('detResults', `Error: ${error.message}`);
     }
 }
 
-function displayResult(result, resultUnit, outputParam, outputUnit, warning) {
+/**
+ * Describe where a result came from: paper, fault style, and the table or
+ * figure the active segment was transcribed from.
+ * @param {Object} modelInfo - {paper, fault, key, direction}
+ * @param {number} inputValue - Input value, to identify the active segment
+ * @param {string} inputUnit - Unit of the input value
+ * @returns {string} HTML for the provenance line, or '' if unavailable
+ */
+function buildProvenance(modelInfo, inputValue, inputUnit) {
+    if (!modelInfo || modelInfo.paper === 'virtual') {
+        return '<div class="provenance">Hanks &amp; Kanamori (1979) moment magnitude definition</div>';
+    }
+
+    const parts = [escapeHtml(modelInfo.paper), escapeHtml(modelInfo.fault)];
+
+    try {
+        const params = getRelationshipParams(modelInfo.paper, modelInfo.fault, modelInfo.key);
+        if (params && params.length) {
+            const unitKey = modelInfo.direction === 'forward' ? 'x' : 'y';
+            const modelUnit = params[0].units[unitKey];
+            const converted = modelUnit ? convertUnits(inputValue, inputUnit, modelUnit) : inputValue;
+            const segment = getTargetSegment(params, converted, modelInfo.direction);
+            if (segment && segment.source) parts.push(escapeHtml(segment.source));
+            if (params.length > 1 && segment) {
+                parts.push(`segment ${params.indexOf(segment) + 1} of ${params.length}`);
+            }
+        }
+    } catch (e) {
+        // Provenance is supplementary; never let it break the result display.
+    }
+
+    if (modelInfo.direction === 'inverse') parts.push('solved inversely');
+
+    return `<div class="provenance">${parts.join('<span class="provenance-sep">·</span>')}</div>`;
+}
+
+function displayResult(result, resultUnit, outputParam, outputUnit, warning, modelInfo, inputValue, inputUnit) {
     const resultsDiv = document.getElementById('detResults');
     
     if (result === null) {
@@ -445,21 +504,23 @@ function displayResult(result, resultUnit, outputParam, outputUnit, warning) {
         finalUnit = 'Mw';
     }
     
-    const unitDisplay = finalUnit && finalUnit !== 'N/A' ? ` (${finalUnit})` : '';
-    
+    const unitSuffix = formatUnit(finalUnit)
+        ? ` <span class="metric-unit">${formatUnit(finalUnit)}</span>` : '';
+
     let html = `
         <div class="result-box">
             <h3>Result</h3>
             <div class="metric">
-                <div class="metric-label">${outputParam}${unitDisplay}</div>
-                <div class="metric-value">${finalResult.toFixed(4)}</div>
+                <div class="metric-label">${outputParam}</div>
+                <div class="metric-value">${formatQuantity(finalResult, outputParam)}${unitSuffix}</div>
             </div>
+            ${buildProvenance(modelInfo, inputValue, inputUnit)}
     `;
-    
+
     if (warning) {
         html += `<div class="warning">${warning}</div>`;
     }
-    
+
     html += '</div>';
     resultsDiv.innerHTML = html;
 }
@@ -565,7 +626,7 @@ function displayBatchResults(results) {
     
     const html = `
         <div class="result-box">
-            <div class="success">Batch calculation complete! Processed ${results.length} rows.</div>
+            <div class="success">Batch calculation complete. Processed ${results.length} rows.</div>
             <h4>Preview (first 10 rows)</h4>
             <table class="stat-table">
                 <thead>
@@ -690,23 +751,19 @@ function displayMonteCarloResults(results, outputParam, outputUnit) {
         x: results,
         type: 'histogram',
         marker: {
-            color: 'rgba(102, 126, 234, 0.7)',
-            line: {
-                color: 'rgba(102, 126, 234, 1)',
-                width: 1
-            }
+            color: 'rgba(138, 51, 36, 0.65)',
+            line: { color: THEME.accent, width: 0.5 }
         },
         nbinsx: 50
     };
-    
-    const layout = {
-        title: `Distribution of ${outputParam}`,
-        xaxis: { title: `${outputParam} (${outputUnit || ''})` },
+
+    const layout = plotLayout({
+        xaxis: { title: `${outputParam}${formatUnit(outputUnit) ? ` (${formatUnit(outputUnit)})` : ''}` },
         yaxis: { title: 'Frequency' },
-        bargap: 0.05
-    };
+        bargap: 0.04
+    });
     
-    const unitDisplay = outputUnit && outputUnit !== 'N/A' ? ` (${outputUnit})` : '';
+    const unitDisplay = formatUnit(outputUnit) ? ` (${formatUnit(outputUnit)})` : '';
     
     const html = `
         <div class="result-box">
@@ -722,20 +779,20 @@ function displayMonteCarloResults(results, outputParam, outputUnit) {
                 </thead>
                 <tbody>
                     <tr><td>Count</td><td>${results.length}</td></tr>
-                    <tr><td>Mean</td><td>${mean.toFixed(4)}</td></tr>
-                    <tr><td>Std Dev</td><td>${std.toFixed(4)}</td></tr>
-                    <tr><td>Min</td><td>${Math.min(...results).toFixed(4)}</td></tr>
-                    <tr><td>16th Percentile</td><td>${p16.toFixed(4)}</td></tr>
-                    <tr><td>50th Percentile (Median)</td><td>${p50.toFixed(4)}</td></tr>
-                    <tr><td>84th Percentile</td><td>${p84.toFixed(4)}</td></tr>
-                    <tr><td>Max</td><td>${Math.max(...results).toFixed(4)}</td></tr>
+                    <tr><td>Mean</td><td>${formatQuantity(mean, outputParam)}</td></tr>
+                    <tr><td>Std Dev</td><td>${formatQuantity(std, outputParam)}</td></tr>
+                    <tr><td>Min</td><td>${formatQuantity(Math.min(...results), outputParam)}</td></tr>
+                    <tr><td>16th Percentile</td><td>${formatQuantity(p16, outputParam)}</td></tr>
+                    <tr><td>50th Percentile (Median)</td><td>${formatQuantity(p50, outputParam)}</td></tr>
+                    <tr><td>84th Percentile</td><td>${formatQuantity(p84, outputParam)}</td></tr>
+                    <tr><td>Max</td><td>${formatQuantity(Math.max(...results), outputParam)}</td></tr>
                 </tbody>
             </table>
         </div>
     `;
     
     document.getElementById('mcResults').innerHTML = html;
-    Plotly.newPlot('mcPlot', [trace], layout, { responsive: true });
+    Plotly.newPlot('mcPlot', [trace], layout, PLOT_CONFIG);
 }
 
 // Plotting
@@ -846,7 +903,7 @@ function updatePlot() {
                     y: validPoints.map(p => p.y),
                     mode: 'lines',
                     name: modelId,
-                    line: { width: 3 }
+                    line: { width: 1.6 }
                 });
                 validTraces++;
             }
@@ -857,33 +914,16 @@ function updatePlot() {
             return;
         }
         
-        const layout = {
-            title: `${yParam} vs ${xParam}`,
-            xaxis: {
-                title: `${xParam} ${xUnit ? `(${xUnit})` : ''}`,
-                type: xScale
-            },
-            yaxis: {
-                title: `${yParam} ${yUnit ? `(${yUnit})` : ''}`,
-                type: yScale
-            },
+        const layout = plotLayout({
+            xaxis: { title: `${xParam}${formatUnit(xUnit) ? ` (${formatUnit(xUnit)})` : ''}`, type: xScale },
+            yaxis: { title: `${yParam}${formatUnit(yUnit) ? ` (${formatUnit(yUnit)})` : ''}`, type: yScale },
             hovermode: 'closest',
             showlegend: true,
-            legend: {
-                orientation: 'v',
-                x: 1.02,
-                y: 1,
-                xanchor: 'left'
-            },
-            margin: {
-                l: 60,
-                r: 200,
-                t: 60,
-                b: 60
-            }
-        };
+            legend: { orientation: 'v', x: 1.02, y: 1, xanchor: 'left' },
+            margin: { l: 64, r: 210, t: 20, b: 56 }
+        });
         
-        Plotly.newPlot('plotDiv', traces, layout, { responsive: true });
+        Plotly.newPlot('plotDiv', traces, layout, PLOT_CONFIG);
     } catch (error) {
         console.error('Plot error:', error);
         plotDiv.innerHTML = `<div class="error">Error generating plot: ${error.message}</div>`;
@@ -900,8 +940,8 @@ function updateComparisonConfig() {
 
     const inputUnits = getUnitsForParam(inputParam);
     const outputUnits = getUnitsForParam(outputParam);
-    populateSelect('cmpInputUnit', inputUnits, inputUnits[0]);
-    populateSelect('cmpOutputUnit', outputUnits, outputUnits[0]);
+    populateUnitSelect('cmpInputUnit', inputUnits, inputUnits[0]);
+    populateUnitSelect('cmpOutputUnit', outputUnits, outputUnits[0]);
 
     updateComparisonModelList();
 }
@@ -1097,7 +1137,7 @@ function runComparison() {
 }
 
 function displayComparisonResults(rows, inputParam, outputParam, inputValue, inputUnit, outputUnit) {
-    const unitDisplay = outputUnit && outputUnit !== 'N/A' ? ` (${outputUnit})` : '';
+    const unitDisplay = formatUnit(outputUnit) ? ` (${formatUnit(outputUnit)})` : '';
     const inputUnitDisplay = inputUnit && inputUnit !== 'N/A' ? ` ${inputUnit}` : '';
 
     let tableHtml = `
@@ -1118,15 +1158,15 @@ function displayComparisonResults(rows, inputParam, outputParam, inputValue, inp
     `;
 
     rows.forEach(row => {
-        const resultStr = row.result !== null ? row.result.toFixed(4) : 'N/A';
-        const lowerStr = row.sigmaLower !== null ? row.sigmaLower.toFixed(4) : 'N/A';
-        const upperStr = row.sigmaUpper !== null ? row.sigmaUpper.toFixed(4) : 'N/A';
-        const inRangeStr = row.inRange ? '✓' : '⚠ Extrapolation';
+        const resultStr = row.result !== null ? formatQuantity(row.result, outputParam) : 'N/A';
+        const lowerStr = row.sigmaLower !== null ? formatQuantity(row.sigmaLower, outputParam) : 'N/A';
+        const upperStr = row.sigmaUpper !== null ? formatQuantity(row.sigmaUpper, outputParam) : 'N/A';
+        const inRangeStr = row.inRange ? 'In range' : 'Extrapolated';
         const inRangeClass = row.inRange ? 'cmp-in-range' : 'cmp-out-of-range';
         tableHtml += `
             <tr>
-                <td>${row.model}</td>
-                <td>${row.faultType}</td>
+                <td class="cmp-model-name">${row.model}</td>
+                <td class="cmp-model-name">${row.faultType}</td>
                 <td><strong>${resultStr}</strong></td>
                 <td>${lowerStr}</td>
                 <td>${upperStr}</td>
@@ -1142,7 +1182,7 @@ function displayComparisonResults(rows, inputParam, outputParam, inputValue, inp
         <div class="result-box">
             <h3>Comparison: ${inputParam} = ${inputValue}${inputUnitDisplay} → ${outputParam}</h3>
             <div class="cmp-toolbar">
-                <button class="btn-secondary" onclick="copyComparisonCSV()">📋 Copy as CSV</button>
+                <button class="btn-secondary" onclick="copyComparisonCSV()">Copy as CSV</button>
             </div>
             ${tableHtml}
             <div id="cmpChart" class="cmp-chart"></div>
@@ -1168,32 +1208,31 @@ function displayComparisonResults(rows, inputParam, outputParam, inputValue, inp
             array: errorBarsUpper,
             arrayminus: errorBarsLower,
             visible: true,
-            color: '#475569',
-            thickness: 2,
-            width: 6
+            color: THEME.inkMute,
+            thickness: 1,
+            width: 4
         },
         marker: {
+            // In-range bars are solid accent; extrapolated bars are outlined
+            // in the warning colour, so the distinction survives greyscale.
             color: validRows.map(r => r.inRange
-                ? 'rgba(102,126,234,0.8)' : 'rgba(251,191,36,0.8)'),
+                ? 'rgba(138,51,36,0.80)' : 'rgba(168,99,28,0.28)'),
             line: {
-                color: validRows.map(r => r.inRange ? '#667eea' : '#f59e0b'),
-                width: 2
+                color: validRows.map(r => r.inRange ? THEME.accent : THEME.warn),
+                width: 1
             }
         },
-        hovertemplate: '<b>%{x}</b><br>Result: %{y:.4f}<extra></extra>'
+        hovertemplate: '<b>%{x}</b><br>%{y:.4g}<extra></extra>'
     };
 
-    const layout = {
-        title: `${outputParam} for ${inputParam} = ${inputValue}${inputUnitDisplay}`,
+    const layout = plotLayout({
         xaxis: { title: 'Model', tickangle: -25 },
         yaxis: { title: `${outputParam}${unitDisplay}` },
-        bargap: 0.3,
-        margin: { b: 140, t: 60, l: 70, r: 30 },
-        paper_bgcolor: 'white',
-        plot_bgcolor: '#f8fafc'
-    };
+        bargap: 0.35,
+        margin: { b: 150, t: 20, l: 72, r: 24 }
+    });
 
-    Plotly.newPlot('cmpChart', [trace], layout, { responsive: true });
+    Plotly.newPlot('cmpChart', [trace], layout, PLOT_CONFIG);
 }
 
 function copyComparisonCSV() {
@@ -1214,8 +1253,8 @@ function copyComparisonCSV() {
         navigator.clipboard.writeText(csvText).then(() => {
             const btn = document.querySelector('.cmp-toolbar .btn-secondary');
             if (btn) {
-                btn.textContent = '✓ Copied!';
-                setTimeout(() => { btn.textContent = '📋 Copy as CSV'; }, 2000);
+                btn.textContent = 'Copied';
+                setTimeout(() => { btn.textContent = 'Copy as CSV'; }, 2000);
             }
         });
     } else {
@@ -1238,7 +1277,7 @@ const MAX_CHAIN_STEPS = 5;
 function updateChainStartUnit() {
     const param = document.getElementById('chainStartParam').value;
     const units = getUnitsForParam(param);
-    populateSelect('chainStartUnit', units, units[0]);
+    populateUnitSelect('chainStartUnit', units, units[0]);
 }
 
 function resetChain() {
@@ -1295,7 +1334,7 @@ function addChainStep() {
         <div class="chain-step-header">
             <span class="chain-step-number">Step ${stepIndex + 1}</span>
             <span class="chain-step-arrow">→</span>
-            <button class="btn-remove-step" onclick="removeChainStep(${stepIndex})" title="Remove this step">✕</button>
+            <button class="btn-remove-step" onclick="removeChainStep(${stepIndex})" title="Remove this step" aria-label="Remove this step">&times;</button>
         </div>
         <div class="form-row">
             <div class="form-group">
@@ -1455,14 +1494,14 @@ function displayChainResults(chainNodes) {
 
     for (let i = 0; i < chainNodes.length; i++) {
         const node = chainNodes[i];
-        const valueStr = node.value !== null ? node.value.toFixed(4) : 'Error';
+        const valueStr = node.value !== null ? formatQuantity(node.value, node.param) : 'Error';
         const unitStr = node.unit && node.unit !== 'N/A' ? ` ${node.unit}` : '';
 
         html += `
             <div class="chain-node ${node.warning ? 'chain-node-warning' : ''}">
                 <div class="chain-node-param">${node.param}</div>
                 <div class="chain-node-value">${valueStr}${unitStr}</div>
-                ${node.warning ? '<div class="chain-node-warn-icon" title="Extrapolation warning">⚠</div>' : ''}
+                ${node.warning ? '<div class="chain-node-flag">Extrapolated</div>' : ''}
             </div>
         `;
 
@@ -1490,7 +1529,7 @@ function displayChainResults(chainNodes) {
     // Extrapolation warnings summary
     const warnings = chainNodes.filter(n => n.warning);
     if (warnings.length > 0) {
-        html += '<div class="warning" style="margin-top:15px;"><strong>⚠ Extrapolation Warnings:</strong><ul style="margin-top:8px; padding-left:20px;">';
+        html += '<div class="warning" style="margin-top:15px;"><strong>Extrapolation warnings</strong><ul style="margin-top:8px; padding-left:20px;">';
         warnings.forEach(n => {
             const stepIdx = chainNodes.indexOf(n);
             html += `<li>Step ${stepIdx}: ${n.param} — ${n.warning}</li>`;

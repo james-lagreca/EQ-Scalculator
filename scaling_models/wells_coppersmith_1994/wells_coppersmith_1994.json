@@ -1,5 +1,6 @@
 {
   "Wells and Coppersmith 1994": {
+    "description": "The standard global empirical relations among magnitude, surface rupture length, subsurface rupture length, rupture width, rupture area and surface displacement, from Wells and Coppersmith (1994), fitted to 244 continental crustal earthquakes. Displacement relations are given against surface rupture length (SRL), which is kept distinct from subsurface rupture length (L). Reverse-faulting displacement relations are omitted by the authors as poorly constrained.",
     "citation": "Wells, D. L., and Coppersmith, K. J. (1994). New empirical relationships among magnitude, rupture length, rupture width, rupture area, and surface displacement. Bulletin of the Seismological Society of America, 84(4), 974-1002.",
     "fault_types": {
       "All": {
