@@ -442,6 +442,47 @@ function calculateSingle() {
 }
 
 /**
+ * Render a model's validity domain as human-readable text, in the unit the
+ * user is actually entering.
+ *
+ * A published range is the authors' claimed applicability, so an open bound is
+ * stated as such rather than shown as a dash or silently squared off.
+ *
+ * @param {Object|null} domain - From getInputDomain(): {min, max, unit, degenerate}
+ * @param {string} param - Input parameter symbol, e.g. 'AD'
+ * @param {string} displayUnit - Unit the user is entering values in
+ * @returns {string} Text for the validity-range cell
+ */
+function describeDomain(domain, param, displayUnit) {
+    if (!domain) return 'Not specified';
+    if (domain.degenerate) return 'Not invertible (saturated)';
+
+    // Domain arrives in model-native units; show it in the user's unit.
+    const toDisplay = (v) => {
+        if (v === null) return null;
+        if (!domain.unit || !displayUnit || displayUnit === 'N/A') return v;
+        try {
+            return convertUnits(v, domain.unit, displayUnit);
+        } catch (e) {
+            return v;
+        }
+    };
+
+    const unitLabel = formatUnit(displayUnit && displayUnit !== 'N/A' ? displayUnit : domain.unit);
+    const suffix = unitLabel ? ` ${unitLabel}` : '';
+    const lo = toDisplay(domain.min);
+    const hi = toDisplay(domain.max);
+
+    // Bounds are read at a glance, so 3 significant figures rather than 4.
+    const q = (v) => formatQuantity(v, param, 3);
+
+    if (lo === null && hi === null) return 'No bounds published';
+    if (hi === null) return `${q(lo)}${suffix} and above (no upper bound published)`;
+    if (lo === null) return `up to ${q(hi)}${suffix} (no lower bound published)`;
+    return `${q(lo)} – ${q(hi)}${suffix}`;
+}
+
+/**
  * Describe where a result came from: paper, fault style, and the table or
  * figure the active segment was transcribed from.
  * @param {Object} modelInfo - {paper, fault, key, direction}
@@ -1026,6 +1067,7 @@ function runComparison() {
                 if (!modelInfo) return;
 
                 let result = null, resultUnit = null, sigma = null, warning = null;
+                let sigmaIsIntercept = false;
 
                 if (modelInfo.paper === 'virtual') {
                     if (inputParam === 'M0') {
@@ -1052,7 +1094,27 @@ function runComparison() {
                         ? convertUnits(inputValue, inputUnit, modelInputUnit)
                         : inputValue;
                     const segment = getTargetSegment(params, convertedInput, modelInfo.direction);
-                    sigma = segment ? (segment.log10_y_std_dev || null) : null;
+
+                    if (segment) {
+                        if (segment.log10_y_std_dev !== null && segment.log10_y_std_dev !== undefined) {
+                            // Scatter in log10(Y), as published.
+                            sigma = segment.log10_y_std_dev;
+                        } else {
+                            // No total scatter published; fall back to the
+                            // uncertainty on the intercept (Leonard 2014),
+                            // which is a narrower quantity - flagged as such.
+                            sigma = parseStdDevA(segment.std_dev_a);
+                            sigmaIsIntercept = sigma !== null;
+                        }
+
+                        // A sigma in log10(Y) becomes sigma/|b| in log10(X)
+                        // when the relation is inverted. Without this Jacobian
+                        // the interval is understated wherever |b| < 1.
+                        if (sigma !== null && modelInfo.direction === 'inverse') {
+                            const b = segment.coefficients.b;
+                            sigma = b !== 0 ? sigma / Math.abs(b) : null;
+                        }
+                    }
 
                     warning = checkIfExtrapolating(params, inputValue, inputUnit, modelInfo.direction);
                 }
@@ -1088,20 +1150,16 @@ function runComparison() {
                     }
                 }
 
-                // Valid range display
+                // Validity range, expressed in the INPUT variable. range_x is
+                // always stated in X, so for an inverse solve it must be mapped
+                // through the forward equation first - otherwise, say, a
+                // rupture-length range is printed as a displacement range.
                 let validRange = 'Not specified';
                 if (modelInfo.paper !== 'virtual') {
                     const params2 = getRelationshipParams(modelInfo.paper, modelInfo.fault, modelInfo.key);
                     if (params2) {
-                        const xKey2 = modelInfo.direction === 'forward' ? 'x' : 'y';
-                        const unit2 = params2[0].units[xKey2];
-                        const ranges = params2.map(seg => {
-                            const r = seg.range_x || [null, null];
-                            const lo = r[0] !== null ? r[0] : '–';
-                            const hi = r[1] !== null ? r[1] : '–';
-                            return `${lo} – ${hi}`;
-                        });
-                        validRange = ranges.join(', ') + (unit2 ? ` ${unit2}` : '');
+                        validRange = describeDomain(
+                            getInputDomain(params2, modelInfo.direction), inputParam, inputUnit);
                     }
                 }
 
@@ -1117,6 +1175,7 @@ function runComparison() {
                     unit: finalUnit,
                     sigmaLower,
                     sigmaUpper,
+                    sigmaIsIntercept,
                     validRange,
                     inRange: !warning,
                     warning
@@ -1150,7 +1209,7 @@ function displayComparisonResults(rows, inputParam, outputParam, inputValue, inp
                     <th>Result${unitDisplay}</th>
                     <th>−1σ${unitDisplay}</th>
                     <th>+1σ${unitDisplay}</th>
-                    <th>Valid Input Range</th>
+                    <th>Valid ${inputParam} range</th>
                     <th>In Range?</th>
                 </tr>
             </thead>
@@ -1163,13 +1222,17 @@ function displayComparisonResults(rows, inputParam, outputParam, inputValue, inp
         const upperStr = row.sigmaUpper !== null ? formatQuantity(row.sigmaUpper, outputParam) : 'N/A';
         const inRangeStr = row.inRange ? 'In range' : 'Extrapolated';
         const inRangeClass = row.inRange ? 'cmp-in-range' : 'cmp-out-of-range';
+        // Mark sigmas derived from intercept uncertainty: a narrower quantity
+        // than the total scatter in log10(Y) the other models publish.
+        const mark = row.sigmaIsIntercept && row.sigmaLower !== null
+            ? '<span class="cmp-footnote-mark" title="Intercept uncertainty, not total scatter">†</span>' : '';
         tableHtml += `
             <tr>
                 <td class="cmp-model-name">${row.model}</td>
                 <td class="cmp-model-name">${row.faultType}</td>
                 <td><strong>${resultStr}</strong></td>
-                <td>${lowerStr}</td>
-                <td>${upperStr}</td>
+                <td>${lowerStr}${mark}</td>
+                <td>${upperStr}${mark}</td>
                 <td class="cmp-range">${row.validRange}</td>
                 <td class="${inRangeClass}">${inRangeStr}</td>
             </tr>
@@ -1177,6 +1240,17 @@ function displayComparisonResults(rows, inputParam, outputParam, inputValue, inp
     });
 
     tableHtml += '</tbody></table></div>';
+
+    if (rows.some(r => r.sigmaIsIntercept && r.sigmaLower !== null)) {
+        tableHtml += `<p class="cmp-footnote">† Uncertainty on the regression intercept, which the
+            source publishes in place of the total scatter in log₁₀(Y) reported by the other models.
+            It is the narrower quantity, so these intervals are not directly comparable with the rest
+            of the column.</p>`;
+    }
+
+    tableHtml += `<p class="cmp-footnote">A validity range is the range of applicability claimed by
+        the authors, not the extent of the data they fitted. A relation may publish no upper bound
+        and still have no observations anywhere near your input.</p>`;
 
     const html = `
         <div class="result-box">
