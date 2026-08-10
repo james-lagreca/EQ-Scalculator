@@ -226,6 +226,60 @@ function getModelDescription(paperName) {
 }
 
 /**
+ * Get the bibliographic citation for a model.
+ * @param {string} paperName - Name of the paper
+ * @returns {string|null} Citation string, or null if the file carries none
+ */
+function getModelCitation(paperName) {
+    try {
+        return allModels[paperName].citation || null;
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
+ * Render the References section from the loaded model files, linking any
+ * DOI found in the citation string. Sorted by paper name.
+ */
+function renderReferences() {
+    const list = document.getElementById('referenceList');
+    if (!list) return;
+
+    const items = Object.keys(allModels).sort().map(paperName => {
+        const citation = getModelCitation(paperName);
+        const text = citation || `${paperName} (citation pending).`;
+        const linked = escapeHtml(text).replace(
+            /(?:doi:\s*|https?:\/\/(?:dx\.)?doi\.org\/)(10\.\d{4,}\/[^\s,;)]+)/i,
+            (_m, doi) => `<a href="https://doi.org/${doi}" rel="noopener">doi:${doi}</a>`
+        );
+        const description = getModelDescription(paperName);
+        const note = description && description !== paperName
+            ? `<br><span class="reference-note">${escapeHtml(description)}</span>`
+            : '';
+        return `<li>${linked}${note}</li>`;
+    });
+
+    list.innerHTML = items.join('');
+
+    const count = document.getElementById('modelCount');
+    if (count) {
+        count.textContent = `${Object.keys(allModels).length} scaling models · `;
+    }
+}
+
+/**
+ * Escape a string for safe interpolation into HTML.
+ * @param {string} str
+ * @returns {string}
+ */
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+/**
  * Get all available fault types for a given paper
  * @param {string} paperName - Name of the paper
  * @returns {Array} Array of fault type names
