@@ -1,0 +1,52 @@
+{
+  "Strasser et al. 2010": {
+    "description": "Source-dimension scaling relations for subduction-zone earthquakes from Strasser, Arango and Bommer (2010), SRL. Separate regressions for interface and intraslab events. Coefficients cross-checked against the OpenQuake hazardlib implementation (openquake/hazardlib/scalerel/strasser2010.py). Intraslab length and width relations from the paper are not included here because they were not available from a verified source at transcription time; only the intraslab moment-area relation is encoded.",
+    "citation": "Strasser, F. O., Arango, M. C., and Bommer, J. J. (2010). Scaling of the Source Dimensions of Interface and Intraslab Subduction-zone Earthquakes with Moment Magnitude. Seismological Research Letters, 81(6), 941-950. doi:10.1785/gssrl.81.6.941",
+    "fault_types": {
+      "Subduction Interface": {
+        "A_from_Mw": [
+          {
+            "source": "Table 1",
+            "equation_form": "log10(Y) = a + b * X",
+            "coefficients": { "a": -3.476, "b": 0.952 },
+            "log10_y_std_dev": 0.304,
+            "units": { "x": null, "y": "km^2" },
+            "range_x": [6.0, 9.6]
+          }
+        ],
+        "L_from_Mw": [
+          {
+            "source": "Table 1",
+            "equation_form": "log10(Y) = a + b * X",
+            "coefficients": { "a": -2.477, "b": 0.585 },
+            "log10_y_std_dev": 0.180,
+            "units": { "x": null, "y": "km" },
+            "range_x": [6.0, 9.6]
+          }
+        ],
+        "W_from_Mw": [
+          {
+            "source": "Table 1",
+            "equation_form": "log10(Y) = a + b * X",
+            "coefficients": { "a": -0.882, "b": 0.351 },
+            "log10_y_std_dev": 0.173,
+            "units": { "x": null, "y": "km" },
+            "range_x": [6.0, 9.6]
+          }
+        ]
+      },
+      "Subduction Intraslab": {
+        "A_from_Mw": [
+          {
+            "source": "Table 2",
+            "equation_form": "log10(Y) = a + b * X",
+            "coefficients": { "a": -3.225, "b": 0.890 },
+            "log10_y_std_dev": 0.184,
+            "units": { "x": null, "y": "km^2" },
+            "range_x": [5.9, 7.8]
+          }
+        ]
+      }
+    }
+  }
+}

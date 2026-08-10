@@ -1,0 +1,55 @@
+{
+  "Allen & Hayes 2017": {
+    "description": "Rupture-scaling relations for subduction interface and other offshore environments from Allen and Hayes (2017), BSSA. The interface model is offered in both the bilinear form (which captures the flattening of area growth for the largest events, as rupture becomes width-limited) and the simpler linear form. Coefficients cross-checked against the OpenQuake hazardlib implementation (openquake/hazardlib/scalerel/allenhayes2017.py). Only the forward magnitude-to-area direction is stored; the app inverts it algebraically, which keeps the bilinear model self-consistent. OpenQuake instead stores separate forward and inverse breakpoints (Mw 8.63 and A 74000 km^2) that do not correspond to the same point.",
+    "citation": "Allen, T. I., and Hayes, G. P. (2017). Alternative Rupture-Scaling Relationships for Subduction Interface and Other Offshore Environments. Bulletin of the Seismological Society of America, 107(3), 1240-1253. doi:10.1785/0120160255",
+    "fault_types": {
+      "Subduction Interface (Bilinear)": {
+        "A_from_Mw": [
+          {
+            "source": "Table 2",
+            "description": "Below the width-saturation magnitude. The two segments differ by about 0.003 in log10(A) at the Mw 8.63 breakpoint, an artefact of rounding in the published coefficients; it is left as published rather than adjusted.",
+            "equation_form": "log10(Y) = a + b * X",
+            "coefficients": { "a": -5.62, "b": 1.22 },
+            "log10_y_std_dev": 0.256,
+            "units": { "x": null, "y": "km^2" },
+            "range_x": [6.0, 8.63]
+          },
+          {
+            "source": "Table 2",
+            "description": "Above the width-saturation magnitude, where rupture area grows more slowly with magnitude.",
+            "equation_form": "log10(Y) = a + b * X",
+            "coefficients": { "a": 2.23, "b": 0.31 },
+            "log10_y_std_dev": 0.256,
+            "units": { "x": null, "y": "km^2" },
+            "range_x": [8.63, null]
+          }
+        ]
+      },
+      "Subduction Interface (Linear)": {
+        "A_from_Mw": [
+          {
+            "source": "Table 2",
+            "description": "Single-segment alternative to the bilinear interface model.",
+            "equation_form": "log10(Y) = a + b * X",
+            "coefficients": { "a": -3.63, "b": 0.96 },
+            "log10_y_std_dev": 0.255,
+            "units": { "x": null, "y": "km^2" },
+            "range_x": [6.0, null]
+          }
+        ]
+      },
+      "Subduction Intraslab": {
+        "A_from_Mw": [
+          {
+            "source": "Table 2",
+            "equation_form": "log10(Y) = a + b * X",
+            "coefficients": { "a": -3.89, "b": 0.96 },
+            "log10_y_std_dev": 0.19,
+            "units": { "x": null, "y": "km^2" },
+            "range_x": [6.0, null]
+          }
+        ]
+      }
+    }
+  }
+}

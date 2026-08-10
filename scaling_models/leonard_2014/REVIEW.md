@@ -13,7 +13,7 @@ Leonard's relations are not independent regressions; they all derive from:
 - `D_Av = C2 * A^0.5` (`C2 = 10^a(D_from_A)`; interplate SS 10^-4.432, SCR SS 10^-4.149)
 - `Mw = (2/3) * log10(M0[N·m]) - 6.07` (Hanks & Kanamori)
 
-Every entry can therefore be cross-derived from the others. `tools/verify_leonard_2014.mjs` automates these checks.
+Every entry can therefore be cross-derived from the others. `tools/verify_models.mjs` automates these checks.
 
 ## Verdict summary
 
@@ -84,7 +84,7 @@ Context for interpreting it:
 ## Re-verifying
 
 ```
-node tools/verify_leonard_2014.mjs
+node tools/verify_models.mjs
 ```
 
-asserts breakpoint continuity, all framework identities, the corrected values, spot calculations through the real `js/solver.js`, and the sigma parser.
+asserts breakpoint continuity, all framework identities, the corrected values, spot calculations through the real `js/solver.js`, and the sigma parser. Pass a path as an argument to point the Leonard checks at an alternative copy of the file.
