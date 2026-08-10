@@ -1,6 +1,6 @@
 # Leonard (2014) transcription review
 
-**Reviewed:** 2026-08-07 · **Data file:** `leonard_2014.json` · **Source:** Leonard, M. (2014), *Self-Consistent Earthquake Fault-Scaling Relations: Update and Extension to Stable Continental Strike-Slip Faults*, BSSA 104(6), 2953–2965, doi:10.1785/0120140087 (PDF committed alongside this file).
+**Reviewed:** 2026-08-07 · **Data file:** `leonard_2014.json` · **Source:** Leonard, M. (2014), *Self-Consistent Earthquake Fault-Scaling Relations: Update and Extension to Stable Continental Strike-Slip Faults*, BSSA 104(6), 2953–2965, doi:10.1785/0120140087. The paper PDF is not redistributed here (publisher copyright); place a local copy in this directory — it is gitignored — to re-check any figure quoted below.
 
 Triggered by a concern that the strike-slip displacement↔length behaviour was wrong. Every coefficient in the JSON was checked digit-by-digit against the paper's Table 3 (SI/metre relations) and Table 4 (Mw relations), against Leonard's self-consistency framework, and against OpenQuake's `Leonard2014_*` implementation for the Mw–A anchors (3.99/4.00/4.18/4.19 — all match).
 

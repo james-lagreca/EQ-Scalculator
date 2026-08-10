@@ -1,6 +1,7 @@
 {
   "Somerville 2014": {
-    "description": "Scaling relations between seismic moment and rupture area of earthquakes in stable continental regions from Somerville (2014), PEER Report 2014/14.",
+    "description": "Scaling relations between seismic moment and rupture area of earthquakes in stable continental regions from Somerville (2014), PEER Report 2014/14. Three independent estimates of rupture area (aftershock, duration and slip-model methods) plus their combination; all share the self-similar slope b = 2/3.",
+    "citation": "Somerville, P. G. (2014). Scaling Relations between Seismic Moment and Rupture Area of Earthquakes in Stable Continental Regions. PEER Report 2014/14, Pacific Earthquake Engineering Research Center, University of California, Berkeley.",
     "fault_types": {
       "SCR - Aftershock Method": {
         "A_from_M0": [

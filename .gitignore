@@ -1,0 +1,15 @@
+# Source-paper PDFs are kept locally for coefficient verification but are not
+# redistributed: they are publisher copyright, and the repository is archived
+# to Zenodo on release. Cite the DOI instead (see scaling_models/*/*.json).
+scaling_models/**/*.pdf
+
+# Chromium/Electron caches that have been committed here by accident before
+**/DawnCache/
+**/GPUCache/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
